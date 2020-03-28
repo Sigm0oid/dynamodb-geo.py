@@ -17,13 +17,13 @@ class GeoDataManager:
         return self.dynamoDBManager.put_Point(putPointInput)
         
     
-    def batch_write_points(lat,lng):
+    def batch_write_points(self):
         pass
     
-    def update_point(lat,lng):
+    def update_point(self):
         pass
     
-    def delete_point(lat,lng):
+    def delete_point(self):
         pass
 
 
