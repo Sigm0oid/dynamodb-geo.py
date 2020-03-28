@@ -1,3 +1,7 @@
+
+"""
+Purpose: A signle point of entry for all the table and dynamodb client configuration
+"""
 class GeoDataManagerConfiguration:
 
     MERGE_THRESHOLD = 2 # still not clear
@@ -5,10 +9,6 @@ class GeoDataManagerConfiguration:
     
 
     geohashIndexName = "geohash-index" # name of the LSI
-
-    
-
-
 
     def __init__(self,dynamoDBClient, tableName):
         self.dynamoDBClient = dynamoDBClient # dynamodb client taken from aws sdk

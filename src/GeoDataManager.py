@@ -1,5 +1,11 @@
+
+"""
+Purpose: A wrapper on the top of DynamoDBManager for performing CRUD operation on our DynamoBD table
+"""
 import GeoDataManagerConfiguration
 from DynamoDBManager import DynamoDBManager
+
+
 
 class GeoDataManager:
 

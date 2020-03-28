@@ -10,13 +10,10 @@ TODO: Make the table configuration parametric.
 Author: Hamza Rhibi
 """
 
-
-
-
 class GeoTableUtil:
 
     def __init__(self,config):
-         self.config=config
+        self.config=config
     
     def create_table(self):
         # skip if table already exists
