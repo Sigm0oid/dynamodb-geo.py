@@ -1,7 +1,18 @@
-'''
-for async call / waiter following this approach :https://boto3.amazonaws.com/v1/documentation/api/latest/guide/dynamodb.html
+#!/usr/bin/env python
 
-'''
+"""
+Purpose: Create the DynamoDB table for geo data based on the GeoDataManagerConfiguration. 
+
+NOTE: for now the capacity is set to 10 RCU and 5 WCU to avoid high cost of batch writing.
+
+TODO: Make the table configuration parametric.
+
+Author: Hamza Rhibi
+"""
+
+
+
+
 class GeoTableUtil:
 
     def __init__(self,config):
@@ -60,12 +71,9 @@ class GeoTableUtil:
         )
 
         print ("Waiting for table [{}] to be created".format(self.config.tableName))
-        table.meta.client.get_waiter('table_exists').wait(TableName=self.config.tableName)
+        self.config.dynamoDBClient.get_waiter('table_exists').wait(TableName=self.config.tableName)
         # if no exception, continue
         print ("Table created")
-
-
-
-
+        return
 
       
