@@ -44,7 +44,7 @@ class DynamoDBManager:
         try:
             response = self.config.dynamoDBClient.get_item(
                 TableName=self.config.tableName,
-                key={
+                Key={
                     self.config.hashKeyAttributeName: {"N": str(hashKey)},
                     self.config.rangeKeyAttributeName: {
                         "S": getPointInput.RangeKeyValue}
