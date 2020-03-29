@@ -21,3 +21,4 @@ class GeoDataManagerConfiguration:
         self.geohashAttributeName = "geohash"
         self.geoJsonAttributeName = "geoJson"
         self.hashKeyLength = 2
+        self.geoJsonPointType="Point" # for now only point is supported

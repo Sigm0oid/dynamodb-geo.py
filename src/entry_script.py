@@ -20,7 +20,10 @@ if __name__ == "__main__":
     geoDataManager = GeoDataManager(config)
     table_util = GeoTableUtil(config)
     table_util.create_table()
-    geoDataManager.put_Point(PutPointInput(GeoPoint(10, 10), str(
-        uuid.uuid4()), "{country: { S: 'UK' },capital: { S: 'London' } }"))
+
+    item_dictionary={'Country':'Tunisia','Surface':210} # dictionary that contains the non key attributes
+
+    geoDataManager.put_Point(PutPointInput(GeoPoint(10, 118), str(
+        uuid.uuid4()), item_dictionary))
     print(geoDataManager.get_Point(GetPointInput(
         GeoPoint(10, 10), "b385bbf9-581b-4df4-b5ad-4c0e3a0794b6")))
