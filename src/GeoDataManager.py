@@ -6,6 +6,8 @@ import GeoDataManagerConfiguration
 from DynamoDBManager import DynamoDBManager
 from model import PutPointInput
 from model import GetPointInput
+from model.Covering import Covering
+from s2.S2Util import S2Util
 
 
 class GeoDataManager:
@@ -28,3 +30,13 @@ class GeoDataManager:
 
     def delete_point(self):
         pass
+
+    def queryRectangle(self, QueryRectangleInput):
+        latLngRect = S2Util().latLngRectFromQueryRectangleInput(
+            QueryRectangleInput)
+        covering = Covering(
+            self.config.S2RegionCoverer().get_covering(latLngRect))
+        """
+        results = self.dispatchQueries(covering, queryRectangleInput)
+        return results
+        """
