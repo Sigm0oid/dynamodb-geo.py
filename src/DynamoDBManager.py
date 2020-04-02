@@ -4,6 +4,8 @@ Purpose: This class contains all the operation to perform on the DynamoDB table
 """
 from s2.S2Manager import S2Manager
 from model.PutPointInput import PutPointInput
+from boto3.dynamodb.conditions import Key, Attr
+
 
 
 class DynamoDBManager:
@@ -12,6 +14,33 @@ class DynamoDBManager:
     def __init__(self, config):
         self.config = config
     
+
+    def queryGeohash(self,queryInput, hashKey ,range): # for now we're not taking params passed into queryInput in consideration
+        """
+        Given a hash key and a min to max GeoHashrange it query the GSI to select the appropriate items to return
+        """
+        response = self.config.dynamoDBClient.query(
+            TableName=self.config.tableName,
+            IndexName= self.config.geohashIndexName,
+            KeyConditionExpression = 'hashKey = :hashKey and '+str(self.config.geohashAttributeName)+' between :geohashMin and :geohashMax',
+            ExpressionAttributeValues = {':hashKey': {'N': str(hashKey)},':geohashMax':{'N': str(range.rangeMax)},':geohashMin':{'N': str(range.rangeMin)}}
+                        )
+        data = response['Items']
+
+        while 'LastEvaluatedKey' in response:
+            response = self.config.dynamoDBClient.query(
+                TableName=self.config.tableName,
+                IndexName= self.config.geohashIndexName,
+            KeyConditionExpression = 'hashKey = :hashKey and '+str(self.config.geohashAttributeName)+' between :geohashMin and :geohashMax',
+            ExpressionAttributeValues = {':hashKey': {'N': str(hashKey)},':geohashMax':{'N': str(range.rangeMax)},':geohashMin':{'N': str(range.rangeMin)}}
+            )
+            data.extend(response['Items'])
+        return data
+
+
+      
+
+
 
     def put_Point(self, putPointInput):
         """
@@ -58,11 +87,11 @@ class DynamoDBManager:
             response = "Error"
         return response
 
-    ''' 
-    Helper function taken from here : https://gist.github.com/JamieCressey/a3a75a397db092d7a70bbe876a6fb817
-    Take a dict as input and return dynamodb put_item item as result
-    '''
     def dict_to_item(self,raw):
+        """ 
+        Helper function taken from here : https://gist.github.com/JamieCressey/a3a75a397db092d7a70bbe876a6fb817
+        Take a dict as input and return dynamodb put_item item as result
+        """
         if type(raw) is dict:
             resp = {}
             for k,v in raw.items():

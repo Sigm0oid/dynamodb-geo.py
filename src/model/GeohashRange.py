@@ -33,8 +33,8 @@ class GeohashRange:
 
     def trySplit(self, hashKeyLength):
         result = []
-        minHashKey = S2Manager.generateHashKey(self.rangeMin, hashKeyLength)
-        maxHashKey = S2Manager.generateHashKey(self.rangeMax, hashKeyLength)
+        minHashKey = S2Manager().generateHashKey(self.rangeMin, hashKeyLength)
+        maxHashKey = S2Manager().generateHashKey(self.rangeMax, hashKeyLength)
         denominator = 10 ** (len(str(self.rangeMin)) - len(str(minHashKey)))
         if minHashKey == maxHashKey:
             result.append(self)

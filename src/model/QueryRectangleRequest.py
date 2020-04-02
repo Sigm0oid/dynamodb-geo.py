@@ -1,8 +1,13 @@
-class QueryRectangleRequest:
+from .GeoQueryInput import GeoQueryInput 
 
-    def __init__(self, minPoint, maxPoint):
+
+class QueryRectangleRequest(GeoQueryInput):
+
+    def __init__(self, minPoint, maxPoint,query_input_dict={}):
+        GeoQueryInput.__init__(self,query_input_dict)
         self.minPoint = minPoint
         self.maxPoint = maxPoint
+        #super().__init__(self,query_input_dict)
 
     def getMinPoint(self):
         return self.minPoint
