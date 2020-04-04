@@ -9,6 +9,8 @@ from model import GetPointInput
 from model.Covering import Covering
 from s2.S2Util import S2Util
 from s2.S2Manager import S2Manager
+from s2sphere import LatLng as S2LatLng
+EARTH_RADIUS_METERS = 6367000.0
 
 
 class GeoDataManager:
@@ -50,7 +52,7 @@ class GeoDataManager:
         covering = Covering(
             self.config.S2RegionCoverer().get_covering(latLngRect))
         results = self.dispatchQueries(covering, QueryRectangleInput)
-        return results
+        return self.filterByRectangle(results, QueryRectangleInput)
 
     def queryRadius(self, QueryRadiusInput):
         latLngRect = S2Util().getBoundingLatLngRectFromQueryRadiusInput(
@@ -58,4 +60,32 @@ class GeoDataManager:
         covering = Covering(
             self.config.S2RegionCoverer().get_covering(latLngRect))
         results = self.dispatchQueries(covering, QueryRadiusInput)
-        return results
+        return self.filterByRadius(results, QueryRadiusInput)
+
+    def filterByRadius(self, ItemList, QueryRadiusInput):
+        centerLatLng = QueryRadiusInput.getCenterPoint()
+        radiusInMeter = QueryRadiusInput.getRadiusInMeter()
+        result = []
+        for item in ItemList:
+            geoJson = item[self.config.geoJsonAttributeName]["S"]
+            coordinates = geoJson.split(",")
+            latitude = float(coordinates[0])
+            longitude = float(coordinates[1])
+            latLng = S2LatLng.from_degrees(latitude, longitude)
+            if(centerLatLng.get_distance(latLng).radians * EARTH_RADIUS_METERS < radiusInMeter):
+                result.append(item)
+        return result
+
+    def filterByRectangle(self, ItemList, QueryRectangleInput):
+        latLngRect = S2Util().latLngRectFromQueryRectangleInput(
+            QueryRectangleInput)
+        result = []
+        for item in ItemList:
+            geoJson = item[self.config.geoJsonAttributeName]["S"]
+            coordinates = geoJson.split(",")
+            latitude = float(coordinates[0])
+            longitude = float(coordinates[1])
+            latLng = S2LatLng.from_degrees(latitude, longitude)
+            if(latLngRect.Contains(latLng)):
+                result.append(item)
+        return result
