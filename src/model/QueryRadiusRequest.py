@@ -7,7 +7,6 @@ class QueryRadiusRequest(GeoQueryInput):
         GeoQueryInput.__init__(self, query_input_dict)
         self.centerPoint = centerPoint
         self.radiusInMeter = radiusInMeter
-        # super().__init__(self,query_input_dict)
 
     def getCenterPoint(self):
         return self.centerPoint

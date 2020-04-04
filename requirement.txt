@@ -1,2 +1,0 @@
-- s2sphere => pip3 install s2sphere
--boto3
