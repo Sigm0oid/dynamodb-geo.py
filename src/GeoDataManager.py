@@ -11,7 +11,6 @@ from s2.S2Util import S2Util
 from s2.S2Manager import S2Manager
 
 
-
 class GeoDataManager:
 
     def __init__(self, config):
@@ -32,17 +31,18 @@ class GeoDataManager:
 
     def delete_point(self):
         pass
-    def dispatchQueries(self,covering, geoQueryInput):
+
+    def dispatchQueries(self, covering, geoQueryInput):
         """
         Generating multiple query from the covering area and running query on the DynamoDB table
         """
-        ranges= covering.getGeoHashRanges(self.config.hashKeyLength)
-        results=[]
+        ranges = covering.getGeoHashRanges(self.config.hashKeyLength)
+        results = []
         for range in ranges:
             hashKey = S2Manager().generateHashKey(range.rangeMin, self.config.hashKeyLength)
-            results.append(self.dynamoDBManager.queryGeohash(geoQueryInput.QueryInput, hashKey, range))
+            results.append(self.dynamoDBManager.queryGeohash(
+                geoQueryInput.QueryInput, hashKey, range))
         return results
-
 
     def queryRectangle(self, QueryRectangleInput):
         latLngRect = S2Util().latLngRectFromQueryRectangleInput(
@@ -50,4 +50,12 @@ class GeoDataManager:
         covering = Covering(
             self.config.S2RegionCoverer().get_covering(latLngRect))
         results = self.dispatchQueries(covering, QueryRectangleInput)
+        return results
+
+    def queryRadius(self, QueryRadiusInput):
+        latLngRect = S2Util().getBoundingLatLngRectFromQueryRadiusInput(
+            QueryRadiusInput)
+        covering = Covering(
+            self.config.S2RegionCoverer().get_covering(latLngRect))
+        results = self.dispatchQueries(covering, QueryRadiusInput)
         return results
