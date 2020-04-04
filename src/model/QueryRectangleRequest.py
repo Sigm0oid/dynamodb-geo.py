@@ -7,7 +7,6 @@ class QueryRectangleRequest(GeoQueryInput):
         GeoQueryInput.__init__(self,query_input_dict)
         self.minPoint = minPoint
         self.maxPoint = maxPoint
-        #super().__init__(self,query_input_dict)
 
     def getMinPoint(self):
         return self.minPoint

@@ -11,7 +11,7 @@ class S2Util:
         latLngRect = None
         if minPoint is not None and maxPoint is not None:
             minLatLng = S2LatLng.from_degrees(
-                minPoint.getLatitude(), maxPoint.getLongitude())
+                minPoint.getLatitude(), minPoint.getLongitude())
             maxLatLng = S2LatLng.from_degrees(
                 maxPoint.getLatitude(), maxPoint.getLongitude())
             latLngRect = S2LatLngRect.from_point_pair(minLatLng, maxLatLng)

@@ -42,13 +42,14 @@ class GeoDataManager:
         results = []
         for range in ranges:
             hashKey = S2Manager().generateHashKey(range.rangeMin, self.config.hashKeyLength)
-            results.append(self.dynamoDBManager.queryGeohash(
+            results.extend(self.dynamoDBManager.queryGeohash(
                 geoQueryInput.QueryInput, hashKey, range))
         return results
 
     def queryRectangle(self, QueryRectangleInput):
         latLngRect = S2Util().latLngRectFromQueryRectangleInput(
             QueryRectangleInput)
+        
         covering = Covering(
             self.config.S2RegionCoverer().get_covering(latLngRect))
         results = self.dispatchQueries(covering, QueryRectangleInput)
@@ -63,7 +64,8 @@ class GeoDataManager:
         return self.filterByRadius(results, QueryRadiusInput)
 
     def filterByRadius(self, ItemList, QueryRadiusInput):
-        centerLatLng = QueryRadiusInput.getCenterPoint()
+        centerLatLng = S2LatLng.from_degrees(QueryRadiusInput.getCenterPoint(
+        ).getLatitude(), QueryRadiusInput.getCenterPoint().getLongitude())
         radiusInMeter = QueryRadiusInput.getRadiusInMeter()
         result = []
         for item in ItemList:
@@ -86,6 +88,6 @@ class GeoDataManager:
             latitude = float(coordinates[0])
             longitude = float(coordinates[1])
             latLng = S2LatLng.from_degrees(latitude, longitude)
-            if(latLngRect.Contains(latLng)):
+            if(latLngRect.contains(latLng)):
                 result.append(item)
         return result
