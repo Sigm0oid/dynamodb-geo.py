@@ -54,7 +54,7 @@ Example:
 config.hashKeyLength = 3;
 
 # Tweak the schema as desired
-TODO
+#TODO
 # Use GeoTableUtil to create table
 table_util = GeoTableUtil(config)
 ```
@@ -78,21 +78,21 @@ Note that you cannot update the hash key, range key, geohash or geoJson. If you 
 
 You must specify a `RangeKeyValue`, a `GeoPoint`, and an `UpdateItemInput` matching the [DynamoDB UpdateItem][updateitem] request (`TableName` and `Key` are filled in for you).
 
-```js
+```python
 #TODO
 ```
 
 ## Deleting a specific point
 You must specify a `RangeKeyValue` and a `GeoPoint`. Optionally, you can pass `DeleteItemInput` matching [DynamoDB DeleteItem][deleteitem] request (`TableName` and `Key` are filled in for you).
 
-```js
+```python
 #TODO
 ```
 ## Rectangular queries
 Query by rectangle by specifying a `MinPoint` and `MaxPoint`.
 
 ```python
-// Querying a rectangle
+# Querying a rectangle
 geoDataManager.queryRectangle(
             QueryRectangleRequest(
                 GeoPoint(36.878184, 10.242358), # min point
@@ -103,7 +103,7 @@ geoDataManager.queryRectangle(
 Query by radius by specifying a `CenterPoint` and `RadiusInMeter`.
 
 ```python
-// Querying 95 meter from the center point (36.879131, 10.243057)
+# Querying 95 meter from the center point (36.879131, 10.243057)
 geoDataManager.queryRadius(
     QueryRadiusRequest(
         GeoPoint(36.879131, 10.243057), # center point
