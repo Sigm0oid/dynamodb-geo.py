@@ -18,24 +18,31 @@ Entry point script for testing
 if __name__ == "__main__":
     # initiat dynamodb service ressource,
     dynamodb = boto3.client('dynamodb', region_name='us-east-2')
-    config = GeoDataManagerConfiguration(dynamodb, 'geo_test_7')
+    config = GeoDataManagerConfiguration(dynamodb, 'geo_test_8')
     geoDataManager = GeoDataManager(config)
+    
     table_util = GeoTableUtil(config)
-    table_util.create_table()
+    create_table_input=table_util.getCreateTableRequest()
+
+    #tweaking the base table parameters 
+    create_table_input["ProvisionedThroughput"]['ReadCapacityUnits']=5
+    
+    #pass the input to create_table method
+    table_util.create_table(create_table_input)
 
     print(" Testing the put item function")
-    item_dictionary={'Country':'Tunisia','Surface':210} # dictionary that contains the non key attributes
+        
 
     print(" Testing the put ITem inside the rectengle ")
-    #geoDataManager.put_Point(PutPointInput(GeoPoint(36.879163, 10.243120), str(
-    #    uuid.uuid4()), item_dictionary))
+    geoDataManager.put_Point(PutPointInput(GeoPoint(36.879163, 10.243120), str(
+        uuid.uuid4()), {}))
     print(" Testing the put ITem outside the rectengle ")
-    #geoDataManager.put_Point(PutPointInput(GeoPoint(36.879502, 10.242143), str(
-    #    uuid.uuid4()), item_dictionary))
+    geoDataManager.put_Point(PutPointInput(GeoPoint(36.879502, 10.242143), str(
+        uuid.uuid4()), {}))
 
     print(" Testing the Get ITem function")
-    #print(geoDataManager.get_Point(GetPointInput(
-    #    GeoPoint(16, 16), "b385bbf9-581b-4df4-b5ad-4c0e3a0794b6")))
+    print(geoDataManager.get_Point(GetPointInput(
+        GeoPoint(16, 16), "b385bbf9-581b-4df4-b5ad-4c0e3a0794b6")))
 
     print(" Testing the query rectangle function")
     # testing the query rectangle method
