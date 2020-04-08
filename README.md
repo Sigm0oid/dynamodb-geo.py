@@ -51,7 +51,7 @@ You can modify this request as desired before executing it using AWS's DynamoDB 
 Example:
 ```python
 # Pick a hashKeyLength appropriate to your usage
-config.hashKeyLength = 3;
+config.hashKeyLength = 3
 
 # Use GeoTableUtil to help construct a CreateTableInput.
 table_util = GeoTableUtil(config)
