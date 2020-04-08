@@ -1,4 +1,4 @@
-from GeohashRange import GeohashRange
+from .GeohashRange import GeohashRange
 from s2sphere import CellId as S2CellId
 
 

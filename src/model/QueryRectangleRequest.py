@@ -1,4 +1,4 @@
-from GeoQueryInput import GeoQueryInput
+from .GeoQueryInput import GeoQueryInput
 
 
 class QueryRectangleRequest(GeoQueryInput):
