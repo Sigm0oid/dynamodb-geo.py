@@ -53,10 +53,15 @@ Example:
 # Pick a hashKeyLength appropriate to your usage
 config.hashKeyLength = 3;
 
-# Tweak the schema as desired
-#TODO
-# Use GeoTableUtil to create table
+# Use GeoTableUtil to help construct a CreateTableInput.
 table_util = GeoTableUtil(config)
+create_table_input=table_util.getCreateTableRequest()
+
+#tweaking the base table parameters as a dict
+create_table_input["ProvisionedThroughput"]['ReadCapacityUnits']=5
+
+# Use GeoTableUtil to create the table
+table_util.create_table(create_table_input)
 ```
 
 
