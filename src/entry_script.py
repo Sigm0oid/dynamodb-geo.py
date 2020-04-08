@@ -32,10 +32,22 @@ if __name__ == "__main__":
 
     print(" Testing the put item function")
         
-
+    #define a dict of the item to input
+    PutItemInput = {
+            'Item': {
+                'Country': {'S': "Tunisia"},
+                'Capital': {'S': "Tunis"},
+                'year': {'S': '2020'}
+            },
+            'ConditionExpression': "attribute_not_exists(hashKey)" # ... Anything else to pass through to `putItem`, eg ConditionExpression
+                
+    }
     print(" Testing the put ITem inside the rectengle ")
-    geoDataManager.put_Point(PutPointInput(GeoPoint(36.879163, 10.243120), str(
-        uuid.uuid4()), {}))
+    geoDataManager.put_Point(PutPointInput(
+        GeoPoint(36.879163, 10.243120), # latitude then latitude longitude
+         str( uuid.uuid4()), # Use this to ensure uniqueness of the hash/range pairs.
+         PutItemInput
+         ))
     print(" Testing the put ITem outside the rectengle ")
     geoDataManager.put_Point(PutPointInput(GeoPoint(36.879502, 10.242143), str(
         uuid.uuid4()), {}))
@@ -48,4 +60,4 @@ if __name__ == "__main__":
     # testing the query rectangle method
     print(geoDataManager.queryRectangle(QueryRectangleRequest(GeoPoint(36.878184, 10.242358),GeoPoint(36.879317, 10.243648))))
     print(" query raduis")
-    print(geoDataManager.queryRadius(QueryRadiusRequest(GeoPoint(36.879131, 10.243057),95)))
+    print(geoDataManager.queryRadius(QueryRadiusRequest(GeoPoint(36.879131, 10.243057),95))) 
