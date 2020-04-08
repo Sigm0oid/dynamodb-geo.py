@@ -68,12 +68,21 @@ table_util.create_table(create_table_input)
 ## Adding data
 ```python
 #preparing non key attributes for the item to add
-item_dictionary={'Country':'Tunisia','Surface':210} # dictionary that contains the non key attributes
 
-geoDataManager.put_Point(
-            PutPointInput(GeoPoint(36.879163, 10.243120), #latitutde then longitude
-            str(uuid.uuid4()), # Use this to ensure uniqueness of the hash/range pairs.
-            item_dictionary))
+PutItemInput = {
+        'Item': {
+            'Country': {'S': "Tunisia"},
+            'Capital': {'S': "Tunis"},
+            'year': {'S': '2020'}
+        },
+        'ConditionExpression': "attribute_not_exists(hashKey)" # ... Anything else to pass through to `putItem`, eg ConditionExpression
+            
+}
+geoDataManager.put_Point(PutPointInput(
+    GeoPoint(36.879163, 10.243120), # latitude then latitude longitude
+        str( uuid.uuid4()), # Use this to ensure uniqueness of the hash/range pairs.
+        PutItemInput # pass the dict here
+        ))
             
 ```
 See also [DynamoDB PutItem request][putitem]
