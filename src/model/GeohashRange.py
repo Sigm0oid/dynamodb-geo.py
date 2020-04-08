@@ -1,28 +1,28 @@
+from GeoDataManagerConfiguration import GeoDataManagerConfiguration
+from s2.S2Manager import S2Manager
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from s2.S2Manager import S2Manager
-from GeoDataManagerConfiguration import GeoDataManagerConfiguration
 
 
 class GeohashRange:
-    def __init__(self, range1, range2):
+    def __init__(self, range1: int, range2: int):
         self.rangeMin = min(range1, range2)
         self.rangeMax = max(range1, range2)
 
-    def getRangeMin(self):
+    def getRangeMin(self) -> int:
         return self.rangeMin
 
-    def setRangeMin(self, rangeMin):
+    def setRangeMin(self, rangeMin: int):
         self.rangeMin = rangeMin
 
-    def getRangeMax(self):
+    def getRangeMax(self) -> int:
         return self.rangeMax
 
-    def setRangeMax(self, rangeMax):
+    def setRangeMax(self, rangeMax: int):
         self.rangeMax = rangeMax
 
-    def tryMerge(self, range):
+    def tryMerge(self, range: int) -> bool:
         if range.getRangeMin() - self.rangeMax <= GeoDataManagerConfiguration.MERGE_THRESHOLD and range.getRangeMin() - self.rangeMax > 0:
             self.rangeMax = range.getRangeMax()
             return True
@@ -31,7 +31,7 @@ class GeohashRange:
             return True
         return False
 
-    def trySplit(self, hashKeyLength):
+    def trySplit(self, hashKeyLength: int) -> 'GeohashRange[]':
         result = []
         minHashKey = S2Manager().generateHashKey(self.rangeMin, hashKeyLength)
         maxHashKey = S2Manager().generateHashKey(self.rangeMax, hashKeyLength)

@@ -1,12 +1,12 @@
-from .GeohashRange import GeohashRange
+from GeohashRange import GeohashRange
 from s2sphere import CellId as S2CellId
 
 
 class Covering:
-    def __init__(self, cellIds):
+    def __init__(self, cellIds: S2CellId):
         self.cellIds = cellIds
 
-    def getGeoHashRanges(self, hashKeyLength):
+    def getGeoHashRanges(self, hashKeyLength: int) -> 'GeohashRange[]':
         ranges = []
         for outerRange in self.cellIds:
             hashRange = GeohashRange(
