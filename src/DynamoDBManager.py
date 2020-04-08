@@ -7,42 +7,41 @@ from model.PutPointInput import PutPointInput
 from boto3.dynamodb.conditions import Key, Attr
 
 
-
 class DynamoDBManager:
-    
 
     def __init__(self, config):
         self.config = config
-    
 
-    def queryGeohash(self,queryInput, hashKey ,range): # for now we're not taking params passed into queryInput in consideration
+    # for now we're not taking params passed into queryInput in consideration
+    def queryGeohash(self, queryInput, hashKey: int, range: int):
         """
         Given a hash key and a min to max GeoHashrange it query the GSI to select the appropriate items to return
         """
         response = self.config.dynamoDBClient.query(
             TableName=self.config.tableName,
-            IndexName= self.config.geohashIndexName,
-            KeyConditionExpression = 'hashKey = :hashKey and '+str(self.config.geohashAttributeName)+' between :geohashMin and :geohashMax',
-            ExpressionAttributeValues = {':hashKey': {'N': str(hashKey)},':geohashMax':{'N': str(range.rangeMax)},':geohashMin':{'N': str(range.rangeMin)}}
-                        )
+            IndexName=self.config.geohashIndexName,
+            KeyConditionExpression='hashKey = :hashKey and ' +
+            str(self.config.geohashAttributeName) +
+            ' between :geohashMin and :geohashMax',
+            ExpressionAttributeValues={':hashKey': {'N': str(hashKey)}, ':geohashMax': {
+                'N': str(range.rangeMax)}, ':geohashMin': {'N': str(range.rangeMin)}}
+        )
         data = response['Items']
 
         while 'LastEvaluatedKey' in response:
             response = self.config.dynamoDBClient.query(
                 TableName=self.config.tableName,
-                IndexName= self.config.geohashIndexName,
-            KeyConditionExpression = 'hashKey = :hashKey and '+str(self.config.geohashAttributeName)+' between :geohashMin and :geohashMax',
-            ExpressionAttributeValues = {':hashKey': {'N': str(hashKey)},':geohashMax':{'N': str(range.rangeMax)},':geohashMin':{'N': str(range.rangeMin)}}
+                IndexName=self.config.geohashIndexName,
+                KeyConditionExpression='hashKey = :hashKey and ' +
+                str(self.config.geohashAttributeName) +
+                ' between :geohashMin and :geohashMax',
+                ExpressionAttributeValues={':hashKey': {'N': str(hashKey)}, ':geohashMax': {
+                    'N': str(range.rangeMax)}, ':geohashMin': {'N': str(range.rangeMin)}}
             )
             data.extend(response['Items'])
         return data
 
-
-      
-
-
-
-    def put_Point(self, putPointInput):
+    def put_Point(self, putPointInput: 'PutPointInput'):
         """
         The dict in Item put_item call, should contains a dict with string as a key and a string as a value: {"N": "123"}
         """
@@ -68,7 +67,7 @@ class DynamoDBManager:
             response = "Error"
         return response
 
-    def get_Point(self, getPointInput):
+    def get_Point(self, getPointInput: 'GetPointInput'):
         """
         The dict in Key get_item call, should contains a dict with string as a key and a string as a value: {"N": "123"}
         """

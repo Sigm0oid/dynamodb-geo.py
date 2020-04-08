@@ -34,7 +34,7 @@ class GeoDataManager:
     def delete_point(self):
         pass
 
-    def dispatchQueries(self, covering, geoQueryInput):
+    def dispatchQueries(self, covering: 'Covering', geoQueryInput: 'GeoQueryInput'):
         """
         Generating multiple query from the covering area and running query on the DynamoDB table
         """
@@ -46,16 +46,16 @@ class GeoDataManager:
                 geoQueryInput.QueryInput, hashKey, range))
         return results
 
-    def queryRectangle(self, QueryRectangleInput):
+    def queryRectangle(self, QueryRectangleInput: 'QueryRectangleRequest'):
         latLngRect = S2Util().latLngRectFromQueryRectangleInput(
             QueryRectangleInput)
-        
+
         covering = Covering(
             self.config.S2RegionCoverer().get_covering(latLngRect))
         results = self.dispatchQueries(covering, QueryRectangleInput)
         return self.filterByRectangle(results, QueryRectangleInput)
 
-    def queryRadius(self, QueryRadiusInput):
+    def queryRadius(self, QueryRadiusInput: 'QueryRadiusRequest'):
         latLngRect = S2Util().getBoundingLatLngRectFromQueryRadiusInput(
             QueryRadiusInput)
         covering = Covering(
@@ -63,7 +63,7 @@ class GeoDataManager:
         results = self.dispatchQueries(covering, QueryRadiusInput)
         return self.filterByRadius(results, QueryRadiusInput)
 
-    def filterByRadius(self, ItemList, QueryRadiusInput):
+    def filterByRadius(self, ItemList: 'points retrieved from dynamoDB', QueryRadiusInput: 'QueryRadiusRequest'):
         centerLatLng = S2LatLng.from_degrees(QueryRadiusInput.getCenterPoint(
         ).getLatitude(), QueryRadiusInput.getCenterPoint().getLongitude())
         radiusInMeter = QueryRadiusInput.getRadiusInMeter()
@@ -78,7 +78,7 @@ class GeoDataManager:
                 result.append(item)
         return result
 
-    def filterByRectangle(self, ItemList, QueryRectangleInput):
+    def filterByRectangle(self, ItemList: 'points retrieved from dynamoDB', QueryRectangleInput: 'QueryRectangleRequest'):
         latLngRect = S2Util().latLngRectFromQueryRectangleInput(
             QueryRectangleInput)
         result = []
