@@ -3,7 +3,7 @@ from s2sphere import CellId as S2CellId
 
 
 class Covering:
-    def __init__(self, cellIds: S2CellId):
+    def __init__(self, cellIds: 'S2CellId'):
         self.cellIds = cellIds
 
     def getGeoHashRanges(self, hashKeyLength: int) -> 'GeohashRange[]':
