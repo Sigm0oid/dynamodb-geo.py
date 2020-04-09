@@ -29,8 +29,8 @@ class GeoDataManager:
         return self.dynamoDBManager.update_Point(UpdateItemInput)
         
 
-    def delete_Point(self):
-        pass
+    def delete_Point(self,DeleteItemInput :'DeleteItemInput'):
+        return self.dynamoDBManager.delete_Point(DeleteItemInput)
 
     def dispatchQueries(self, covering: 'Covering', geoQueryInput: 'GeoQueryInput'):
         """
