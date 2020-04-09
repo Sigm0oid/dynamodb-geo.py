@@ -1,5 +1,5 @@
-from GeoDataManagerConfiguration import GeoDataManagerConfiguration
-from s2.S2Manager import S2Manager
+from src import GeoDataManagerConfiguration
+from src.s2 import S2Manager
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

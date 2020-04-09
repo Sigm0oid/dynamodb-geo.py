@@ -2,7 +2,7 @@
 Purpose: This class contains all the operation to perform on the DynamoDB table
 
 """
-from s2.S2Manager import S2Manager
+from s2 import S2Manager
 from boto3.dynamodb.conditions import Key, Attr
 
 

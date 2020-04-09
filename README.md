@@ -115,7 +115,17 @@ geoDataManager.update_Point(UpdateItemInput(
 You must specify a `RangeKeyValue` and a `GeoPoint`. Optionally, you can pass `DeleteItemInput` matching [DynamoDB DeleteItem][deleteitem] request (`TableName` and `Key` are filled in for you).
 
 ```python
-#TODO
+# Preparing dict of the item to delete
+DeleteItemDict= {
+        "ConditionExpression": "attribute_exists(Country)",
+        "ReturnValues": "ALL_OLD" 
+        # Don't put keys here, they will be generated for you implecitly
+    }
+geoDataManager.delete_Point(DeleteItemInput(
+    GeoPoint(36.879163,10.24312), # latitude then latitude longitude
+        "0df9742f-619b-49e5-b79e-9fb94279d30c", # Use this to ensure uniqueness of the hash/range pairs.
+        DeleteItemDict # pass the dict that contain the remaining parameters here
+        ))
 ```
 ## Rectangular queries
 Query by rectangle by specifying a `MinPoint` and `MaxPoint`.
