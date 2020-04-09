@@ -4,11 +4,8 @@ Purpose: A wrapper on the top of DynamoDBManager for performing CRUD operation o
 """
 import GeoDataManagerConfiguration
 from DynamoDBManager import DynamoDBManager
-from model import PutPointInput
-from model import GetPointInput
-from model.Covering import Covering
-from s2.S2Util import S2Util
-from s2.S2Manager import S2Manager
+from model import PutPointInput,Covering,GetPointInput
+from s2 import *
 from s2sphere import LatLng as S2LatLng
 EARTH_RADIUS_METERS = 6367000.0
 

@@ -1,17 +1,6 @@
-from GeoDataManagerConfiguration import GeoDataManagerConfiguration
-from GeoDataManager import GeoDataManager
-from util.GeoTableUtil import GeoTableUtil
 import boto3
-from model.PutPointInput import PutPointInput
-from model.GetPointInput import GetPointInput
-from model.UpdateItemInput import UpdateItemInput
-from model.QueryRectangleRequest import QueryRectangleRequest
-from model.DeleteItemInput import DeleteItemInput
-from model.GeoPoint import GeoPoint
-from model.QueryRadiusRequest import QueryRadiusRequest
-import uuid
-
-
+from src import  * 
+import uuid # used in range key uniquness
 '''
 Entry point script for testing
 '''
@@ -49,7 +38,7 @@ if __name__ == "__main__":
          str( uuid.uuid4()), # Use this to ensure uniqueness of the hash/range pairs.
          PutItemInput
          ))
-        
+     
     print(" Testing the put ITem outside the rectengle ")
     geoDataManager.put_Point(PutPointInput(GeoPoint(36.879502, 10.242143), str(
         uuid.uuid4()),PutItemInput))
@@ -63,7 +52,7 @@ if __name__ == "__main__":
     print(geoDataManager.queryRectangle(QueryRectangleRequest(GeoPoint(36.878184, 10.242358),GeoPoint(36.879317, 10.243648))))
     print(" query raduis")
     print(geoDataManager.queryRadius(QueryRadiusRequest(GeoPoint(36.879131, 10.243057),95)))
-
+    
     #define a dict of the item to input
     UpdateItemDict= {
             "UpdateExpression": "set Capital = :val1",
