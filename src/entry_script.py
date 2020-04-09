@@ -4,6 +4,7 @@ from util.GeoTableUtil import GeoTableUtil
 import boto3
 from model.PutPointInput import PutPointInput
 from model.GetPointInput import GetPointInput
+from model.UpdateItemInput import UpdateItemInput
 from model.QueryRectangleRequest import QueryRectangleRequest
 from model.GeoPoint import GeoPoint
 from model.QueryRadiusRequest import QueryRadiusRequest
@@ -29,8 +30,7 @@ if __name__ == "__main__":
     
     #pass the input to create_table method
     table_util.create_table(create_table_input)
-
-    print(" Testing the put item function")
+    
         
     #define a dict of the item to input
     PutItemInput = {
@@ -48,9 +48,10 @@ if __name__ == "__main__":
          str( uuid.uuid4()), # Use this to ensure uniqueness of the hash/range pairs.
          PutItemInput
          ))
+        
     print(" Testing the put ITem outside the rectengle ")
     geoDataManager.put_Point(PutPointInput(GeoPoint(36.879502, 10.242143), str(
-        uuid.uuid4()), {}))
+        uuid.uuid4()),PutItemInput))
 
     print(" Testing the Get ITem function")
     print(geoDataManager.get_Point(GetPointInput(
@@ -60,4 +61,21 @@ if __name__ == "__main__":
     # testing the query rectangle method
     print(geoDataManager.queryRectangle(QueryRectangleRequest(GeoPoint(36.878184, 10.242358),GeoPoint(36.879317, 10.243648))))
     print(" query raduis")
-    print(geoDataManager.queryRadius(QueryRadiusRequest(GeoPoint(36.879131, 10.243057),95))) 
+    print(geoDataManager.queryRadius(QueryRadiusRequest(GeoPoint(36.879131, 10.243057),95)))
+
+    #define a dict of the item to input
+    UpdateItemDict= {
+            "UpdateExpression": "set Capital = :val1",
+            "ConditionExpression": "Capital = :val2",
+            "ExpressionAttributeValues": {
+                ":val1": {"S": "Tunis"},
+                ":val2": {"S": "Ariana"}
+            },
+            "ReturnValues": "ALL_NEW"
+    }
+    print(" Testing the Update Item")
+    geoDataManager.update_Point(UpdateItemInput(
+        GeoPoint(36.879163,10.24312), # latitude then latitude longitude
+         "1e955491-d8ba-483d-b7ab-98370a8acf82", # Use this to ensure uniqueness of the hash/range pairs.
+         UpdateItemDict # pass the dict that contain the remaining parameters here
+         ))

@@ -87,3 +87,29 @@ class DynamoDBManager:
             print("The following error occured during the item retrieval :{}".format(e))
             response = "Error"
         return response
+    
+    def update_Point(self,UpdateItemInput : 'UpdateItemInput'):
+        """
+        The dict in Item Update call, should contains a dict with string as a key and a string as a value: {"N": "123"}
+        """
+        geohash = S2Manager().generateGeohash(UpdateItemInput.GeoPoint)
+        hashKey = S2Manager().generateHashKey(geohash, self.config.hashKeyLength)
+        response = ""
+        params=UpdateItemInput.ExtraFields.copy()   
+
+        params['TableName']=self.config.tableName
+        
+        if('Key' not in UpdateItemInput.ExtraFields.keys()):
+            params['Key']={}
+
+        params['Key'][self.config.hashKeyAttributeName] ={"N": str(hashKey)}
+        params['Key'][self.config.rangeKeyAttributeName] ={"S": UpdateItemInput.RangeKeyValue}
+        
+        #TODO Geohash and geoJson cannot be updated. For now no control over that need to be added        
+        try:
+            response = self.config.dynamoDBClient.update_item(**params)
+        except Exception as e:
+            print("The following error occured during the item insertion :{}".format(e))
+            response = "Error"
+        return response
+

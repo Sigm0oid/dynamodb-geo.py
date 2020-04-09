@@ -22,16 +22,14 @@ class GeoDataManager:
     def put_Point(self, putPointInput):
         return self.dynamoDBManager.put_Point(putPointInput)
 
-    def get_Point(self, getPointInput):
+    def get_Point(self, getPointInput: 'getPointInput'):
         return self.dynamoDBManager.get_Point(getPointInput)
 
-    def batch_write_points(self):
-        pass
+    def update_Point(self,UpdateItemInput : 'UpdateItemInput'):
+        return self.dynamoDBManager.update_Point(UpdateItemInput)
+        
 
-    def update_point(self):
-        pass
-
-    def delete_point(self):
+    def delete_Point(self):
         pass
 
     def dispatchQueries(self, covering: 'Covering', geoQueryInput: 'GeoQueryInput'):
