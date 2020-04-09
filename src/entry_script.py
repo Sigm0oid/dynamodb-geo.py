@@ -6,6 +6,7 @@ from model.PutPointInput import PutPointInput
 from model.GetPointInput import GetPointInput
 from model.UpdateItemInput import UpdateItemInput
 from model.QueryRectangleRequest import QueryRectangleRequest
+from model.DeleteItemInput import DeleteItemInput
 from model.GeoPoint import GeoPoint
 from model.QueryRadiusRequest import QueryRadiusRequest
 import uuid
@@ -31,7 +32,7 @@ if __name__ == "__main__":
     #pass the input to create_table method
     table_util.create_table(create_table_input)
     
-        
+    
     #define a dict of the item to input
     PutItemInput = {
             'Item': {
@@ -78,4 +79,16 @@ if __name__ == "__main__":
         GeoPoint(36.879163,10.24312), # latitude then latitude longitude
          "1e955491-d8ba-483d-b7ab-98370a8acf82", # Use this to ensure uniqueness of the hash/range pairs.
          UpdateItemDict # pass the dict that contain the remaining parameters here
+         ))
+    # Preparing dict of the item to delete
+    DeleteItemDict= {
+            "ConditionExpression": "attribute_exists(Country)",
+            "ReturnValues": "ALL_OLD" 
+            # Don't put keys here, they will be generated for you implecitly
+        }
+    print(" Testing the Delete Item")
+    geoDataManager.delete_Point(DeleteItemInput(
+        GeoPoint(36.879163,10.24312), # latitude then latitude longitude
+         "0df9742f-619b-49e5-b79e-9fb94279d30c", # Use this to ensure uniqueness of the hash/range pairs.
+         DeleteItemDict # pass the dict that contain the remaining parameters here
          ))

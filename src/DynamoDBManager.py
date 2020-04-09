@@ -3,7 +3,6 @@ Purpose: This class contains all the operation to perform on the DynamoDB table
 
 """
 from s2.S2Manager import S2Manager
-from model.PutPointInput import PutPointInput
 from boto3.dynamodb.conditions import Key, Attr
 
 
@@ -109,7 +108,30 @@ class DynamoDBManager:
         try:
             response = self.config.dynamoDBClient.update_item(**params)
         except Exception as e:
-            print("The following error occured during the item insertion :{}".format(e))
+            print("The following error occured during the item update :{}".format(e))
+            response = "Error"
+        return response
+
+    def delete_Point(self,DeleteItemInput : 'DeleteItemInput'):
+        """
+        The dict in Item Update call, should contains a dict with string as a key and a string as a value: {"N": "123"}
+        """
+        geohash = S2Manager().generateGeohash(DeleteItemInput.GeoPoint)
+        hashKey = S2Manager().generateHashKey(geohash, self.config.hashKeyLength)
+        response = ""
+        params=DeleteItemInput.ExtraFields.copy()   
+
+        params['TableName']=self.config.tableName
+        
+        if('Key' not in DeleteItemInput.ExtraFields.keys()):
+            params['Key']={}
+
+        params['Key'][self.config.hashKeyAttributeName] ={"N": str(hashKey)}
+        params['Key'][self.config.rangeKeyAttributeName] ={"S": DeleteItemInput.RangeKeyValue}
+        try:
+            response = self.config.dynamoDBClient.delete_item(**params)
+        except Exception as e:
+            print("The following error occured during the item delete :{}".format(e))
             response = "Error"
         return response
 
