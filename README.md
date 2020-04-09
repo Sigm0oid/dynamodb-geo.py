@@ -4,7 +4,7 @@ This project is an unofficial port of [awslabs/dynamodb-geo][dynamodb-geo], brin
 ## Features
 * **Box Queries:** Return all of the items that fall within a pair of geo points that define a rectangle as projected onto a sphere.
 * **Radius Queries:** Return all of the items that are within a given radius of a geo point.
-* **Basic CRUD Operations:** Create, retrieve geospatial data items. TODO: update, and delete
+* **Basic CRUD Operations:**  Create, retrieve, update, and delete geospatial data items.
 * **Customizable:** Access to raw request and result objects from the AWS SDK for python.
 
 ## Installation
@@ -90,10 +90,25 @@ See also [DynamoDB PutItem request][putitem]
 ## Updating a specific point
 Note that you cannot update the hash key, range key, geohash or geoJson. If you want to change these, you'll need to recreate the record.
 
-You must specify a `RangeKeyValue`, a `GeoPoint`, and an `UpdateItemInput` matching the [DynamoDB UpdateItem][updateitem] request (`TableName` and `Key` are filled in for you).
+You must specify a `RangeKeyValue`, a `GeoPoint`, and an `UpdateItemInput dict` matching the [DynamoDB UpdateItem][updateitem] request (`TableName` and `Key` are filled in for you).
 
+#### Note : You must NOT update geoJson and geohash attributes.
 ```python
-#TODO
+#define a dict of the item to update
+UpdateItemDict= { #Dont provide TableName and Key, they are filled in for you
+        "UpdateExpression": "set Capital = :val1",
+        "ConditionExpression": "Capital = :val2",
+        "ExpressionAttributeValues": {
+            ":val1": {"S": "Tunis"},
+            ":val2": {"S": "Ariana"}
+        },
+        "ReturnValues": "ALL_NEW"
+}
+geoDataManager.update_Point(UpdateItemInput(
+    GeoPoint(36.879163,10.24312), # An object specifying latitutde and longitude as plain numbers.
+        "1e955491-d8ba-483d-b7ab-98370a8acf82", # Use this to ensure uniqueness of the hash/range pairs.
+        UpdateItemDict 
+        ))
 ```
 
 ## Deleting a specific point
