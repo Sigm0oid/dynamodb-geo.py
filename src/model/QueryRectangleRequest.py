@@ -1,4 +1,5 @@
-from .GeoQueryInput import GeoQueryInput
+import os, sys; sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+from GeoQueryInput import GeoQueryInput
 
 
 class QueryRectangleRequest(GeoQueryInput):
