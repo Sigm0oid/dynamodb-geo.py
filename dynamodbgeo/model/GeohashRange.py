@@ -1,5 +1,5 @@
-from src import GeoDataManagerConfiguration
-from src.s2 import S2Manager
+from dynamodbgeo import GeoDataManagerConfiguration
+from dynamodbgeo.s2 import S2Manager
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

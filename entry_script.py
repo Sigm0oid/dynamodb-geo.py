@@ -1,5 +1,5 @@
 import boto3
-from src import  * 
+from dynamodbgeo import  * 
 import uuid # used in range key uniquness
 '''
 Entry point script for testing
