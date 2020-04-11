@@ -8,31 +8,46 @@ This project is an unofficial port of [awslabs/dynamodb-geo][dynamodb-geo], brin
 * **Customizable:** Access to raw request and result objects from the AWS SDK for python.
 
 ## Installation
-TODO
+
+```python
+pip install -i https://test.pypi.org/simple/ dynamodbgeo==0.1
+```
 
 ## Getting started
 First you'll need to import the AWS sdk and set up your DynamoDB connection:
 
 ```python
 import boto3
+import dynamodbgeo
 dynamodb = boto3.client('dynamodb', region_name='us-east-2')
 ```
 
 Next you must create an instance of `GeoDataManagerConfiguration` for each geospatial table you wish to interact with. This is a container for various options (see API below), but you must always provide a `DynamoDB` instance and a table name.
 
 ```python
-config = GeoDataManagerConfiguration(dynamodb, 'geo_test')
-geoDataManager = GeoDataManager(config)
+    config = dynamodbgeo.GeoDataManagerConfiguration(dynamodb, 'geo_test_8')
 ```
 
 Finally, you should instantiate a manager to query and write to the table using this config object.
 
 ```python
-geoDataManager = GeoDataManager(config)
+geoDataManager = dynamodbgeo.GeoDataManager(config)
 ```
 
 ## Choosing a `hashKeyLength` (optimising for performance and cost)
-TODO
+The `hashKeyLength` is the number of most significant digits (in base 10) of the 64-bit geo hash to use as the hash key. Larger numbers will allow small geographical areas to be spread across DynamoDB partitions, but at the cost of performance as more [queries][dynamodb-query] need to be executed for box/radius searches that span hash keys. See [these tests][hashkeylength-tests](TODO) for an idea of how query performance scales with `hashKeyLength` for different search radii.
+
+If your data is sparse, a large number will mean more RCUs since more empty queries will be executed and each has a minimum cost. However if your data is dense and `hashKeyLength` too short, more RCUs will be needed to read a hash key and a higher proportion will be discarded by server-side filtering.
+
+From the [AWS `Query` documentation][dynamodb-query]
+> DynamoDB calculates the number of read capacity units consumed based on item size, not on the amount of data that is returned to an application. ... **The number will also be the same whether or not you use a `FilterExpression`**
+
+Optimally, you should pick the largest `hashKeyLength` your usage scenario allows. The wider your typical radius/box queries, the smaller it will need to be.
+
+Note that the [Java version][dynamodb-geo] uses a `hashKeyLength` of `6` by default. The same value will need to be used if you access the same data with both clients.
+
+This is an important early choice, since changing your `hashKeyLength` will mean recreating your data.
+
 
 From the [AWS `Query` documentation][dynamodb-query]
 > DynamoDB calculates the number of read capacity units consumed based on item size, not on the amount of data that is returned to an application. ... **The number will also be the same whether or not you use a `FilterExpression`**
@@ -54,7 +69,7 @@ Example:
 config.hashKeyLength = 3
 
 # Use GeoTableUtil to help construct a CreateTableInput.
-table_util = GeoTableUtil(config)
+table_util = dynamodbgeo.GeoTableUtil(config)
 create_table_input=table_util.getCreateTableRequest()
 
 #tweaking the base table parameters as a dict
@@ -78,10 +93,10 @@ PutItemInput = {
         'ConditionExpression': "attribute_not_exists(hashKey)" # ... Anything else to pass through to `putItem`, eg ConditionExpression
             
 }
-geoDataManager.put_Point(PutPointInput(
-    GeoPoint(36.879163, 10.243120), # latitude then latitude longitude
-        str( uuid.uuid4()), # Use this to ensure uniqueness of the hash/range pairs.
-        PutItemInput # pass the dict here
+geoDataManager.put_Point(dynamodbgeo.PutPointInput(
+        dynamodbgeo.GeoPoint(36.879163, 10.243120), # latitude then latitude longitude
+         str( uuid.uuid4()), # Use this to ensure uniqueness of the hash/range pairs.
+         PutItemInput # pass the dict here
         ))
             
 ```
@@ -95,7 +110,7 @@ You must specify a `RangeKeyValue`, a `GeoPoint`, and an `UpdateItemInput dict` 
 #### Note : You must NOT update geoJson and geohash attributes.
 ```python
 #define a dict of the item to update
-UpdateItemDict= { #Dont provide TableName and Key, they are filled in for you
+UpdateItemDict= { # Dont provide TableName and Key, they are filled in for you
         "UpdateExpression": "set Capital = :val1",
         "ConditionExpression": "Capital = :val2",
         "ExpressionAttributeValues": {
@@ -104,11 +119,11 @@ UpdateItemDict= { #Dont provide TableName and Key, they are filled in for you
         },
         "ReturnValues": "ALL_NEW"
 }
-geoDataManager.update_Point(UpdateItemInput(
-    GeoPoint(36.879163,10.24312), # An object specifying latitutde and longitude as plain numbers.
-        "1e955491-d8ba-483d-b7ab-98370a8acf82", # Use this to ensure uniqueness of the hash/range pairs.
-        UpdateItemDict 
-        ))
+geoDataManager.update_Point(dynamodbgeo.UpdateItemInput(
+        dynamodbgeo.GeoPoint(36.879163,10.24312), # latitude then latitude longitude
+         "1e955491-d8ba-483d-b7ab-98370a8acf82", # Use this to ensure uniqueness of the hash/range pairs.
+         UpdateItemDict # pass the dict that contain the remaining parameters here
+         ))
 ```
 
 ## Deleting a specific point
@@ -117,12 +132,13 @@ You must specify a `RangeKeyValue` and a `GeoPoint`. Optionally, you can pass `D
 ```python
 # Preparing dict of the item to delete
 DeleteItemDict= {
-        "ConditionExpression": "attribute_exists(Country)",
-        "ReturnValues": "ALL_OLD" 
-        # Don't put keys here, they will be generated for you implecitly
-    }
-geoDataManager.delete_Point(DeleteItemInput(
-    GeoPoint(36.879163,10.24312), # latitude then latitude longitude
+            "ConditionExpression": "attribute_exists(Country)",
+            "ReturnValues": "ALL_OLD" 
+            # Don't put keys here, they will be generated for you implecitly
+        }
+geoDataManager.delete_Point(
+    dynamodbgeo.DeleteItemInput(
+    dynamodbgeo.GeoPoint(36.879163,10.24312), # latitude then latitude longitude
         "0df9742f-619b-49e5-b79e-9fb94279d30c", # Use this to ensure uniqueness of the hash/range pairs.
         DeleteItemDict # pass the dict that contain the remaining parameters here
         ))
@@ -132,10 +148,9 @@ Query by rectangle by specifying a `MinPoint` and `MaxPoint`.
 
 ```python
 # Querying a rectangle
-geoDataManager.queryRectangle(
-            QueryRectangleRequest(
-                GeoPoint(36.878184, 10.242358), # min point
-                GeoPoint(36.879317, 10.243648))) # max point
+query_rectangle_result=dynamodbgeo.QueryRectangleRequest(
+            dynamodbgeo.GeoPoint(36.878184, 10.242358), # min point
+            dynamodbgeo.GeoPoint(36.879317, 10.243648)))) # max point
 ```
 
 ## Radius queries
@@ -143,10 +158,11 @@ Query by radius by specifying a `CenterPoint` and `RadiusInMeter`.
 
 ```python
 # Querying 95 meter from the center point (36.879131, 10.243057)
-geoDataManager.queryRadius(
-    QueryRadiusRequest(
-        GeoPoint(36.879131, 10.243057), # center point
+query_reduis_result=geoDataManager.queryRadius(
+    dynamodbgeo.QueryRadiusRequest(
+        dynamodbgeo.GeoPoint(36.879131, 10.243057), # center point
         95)) # diameter
+
 ```
 
 ## Batch operations
@@ -173,7 +189,7 @@ The name of the attribute which will contain the longitude/latitude pair in a Ge
 The name of the index to be created against the geohash. Only used for creating new tables.
 
 ## Example
-See the [example on Github][example]
+TODO
 
 ## Limitations
 

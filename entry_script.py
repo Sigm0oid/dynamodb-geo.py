@@ -1,5 +1,5 @@
 import boto3
-from dynamodbgeo import  * 
+import dynamodbgeo 
 import uuid # used in range key uniquness
 '''
 Entry point script for testing
@@ -9,10 +9,10 @@ Entry point script for testing
 if __name__ == "__main__":
     # initiat dynamodb service ressource,
     dynamodb = boto3.client('dynamodb', region_name='us-east-2')
-    config = GeoDataManagerConfiguration(dynamodb, 'geo_test_8')
-    geoDataManager = GeoDataManager(config)
+    config = dynamodbgeo.GeoDataManagerConfiguration(dynamodb, 'geo_test_8')
+    geoDataManager = dynamodbgeo.GeoDataManager(config)
     
-    table_util = GeoTableUtil(config)
+    table_util = dynamodbgeo.GeoTableUtil(config)
     create_table_input=table_util.getCreateTableRequest()
 
     #tweaking the base table parameters 
@@ -33,25 +33,36 @@ if __name__ == "__main__":
                 
     }
     print(" Testing the put ITem inside the rectengle ")
-    geoDataManager.put_Point(PutPointInput(
-        GeoPoint(36.879163, 10.243120), # latitude then latitude longitude
+    geoDataManager.put_Point(dynamodbgeo.PutPointInput(
+        dynamodbgeo.GeoPoint(36.879163, 10.243120), # latitude then latitude longitude
          str( uuid.uuid4()), # Use this to ensure uniqueness of the hash/range pairs.
          PutItemInput
          ))
      
     print(" Testing the put ITem outside the rectengle ")
-    geoDataManager.put_Point(PutPointInput(GeoPoint(36.879502, 10.242143), str(
-        uuid.uuid4()),PutItemInput))
+    geoDataManager.put_Point(dynamodbgeo.PutPointInput(
+        dynamodbgeo.GeoPoint(36.879502, 10.242143), 
+        str(uuid.uuid4()),
+        PutItemInput))
 
     print(" Testing the Get ITem function")
-    print(geoDataManager.get_Point(GetPointInput(
-        GeoPoint(16, 16), "b385bbf9-581b-4df4-b5ad-4c0e3a0794b6")))
+    print(geoDataManager.get_Point(
+        dynamodbgeo.GetPointInput(
+        dynamodbgeo.GeoPoint(16, 16),
+         "b385bbf9-581b-4df4-b5ad-4c0e3a0794b6"
+         )))
 
     print(" Testing the query rectangle function")
     # testing the query rectangle method
-    print(geoDataManager.queryRectangle(QueryRectangleRequest(GeoPoint(36.878184, 10.242358),GeoPoint(36.879317, 10.243648))))
+    print(geoDataManager.queryRectangle(
+        dynamodbgeo.QueryRectangleRequest(
+            dynamodbgeo.GeoPoint(36.878184, 10.242358),
+            dynamodbgeo.GeoPoint(36.879317, 10.243648))))
     print(" query raduis")
-    print(geoDataManager.queryRadius(QueryRadiusRequest(GeoPoint(36.879131, 10.243057),95)))
+    print(geoDataManager.queryRadius(
+        dynamodbgeo.QueryRadiusRequest(
+            dynamodbgeo.GeoPoint(36.879131, 10.243057),
+            95)))
     
     #define a dict of the item to input
     UpdateItemDict= {
@@ -64,8 +75,8 @@ if __name__ == "__main__":
             "ReturnValues": "ALL_NEW"
     }
     print(" Testing the Update Item")
-    geoDataManager.update_Point(UpdateItemInput(
-        GeoPoint(36.879163,10.24312), # latitude then latitude longitude
+    geoDataManager.update_Point(dynamodbgeo.UpdateItemInput(
+        dynamodbgeo.GeoPoint(36.879163,10.24312), # latitude then latitude longitude
          "1e955491-d8ba-483d-b7ab-98370a8acf82", # Use this to ensure uniqueness of the hash/range pairs.
          UpdateItemDict # pass the dict that contain the remaining parameters here
          ))
@@ -76,8 +87,9 @@ if __name__ == "__main__":
             # Don't put keys here, they will be generated for you implecitly
         }
     print(" Testing the Delete Item")
-    geoDataManager.delete_Point(DeleteItemInput(
-        GeoPoint(36.879163,10.24312), # latitude then latitude longitude
+    geoDataManager.delete_Point(
+        dynamodbgeo.DeleteItemInput(
+        dynamodbgeo.GeoPoint(36.879163,10.24312), # latitude then latitude longitude
          "0df9742f-619b-49e5-b79e-9fb94279d30c", # Use this to ensure uniqueness of the hash/range pairs.
          DeleteItemDict # pass the dict that contain the remaining parameters here
          ))
