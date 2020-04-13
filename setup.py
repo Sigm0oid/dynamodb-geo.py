@@ -1,5 +1,5 @@
 from setuptools import setup
-
+import setuptools
 def readme():
     with open('README.md') as f:
         README = f.read()
@@ -8,7 +8,7 @@ def readme():
 
 setup(
       name="dynamodbgeo",
-      version='0.1',
+      version='0.3',
       description='A python port of awslabs/dynamodb-geo, for easier geospatial data manipulation and querying in DynamoDB',
       url='https://github.com/Sigm0oid/dynamodb-geo.py',
       author='Hamza Rhibi & Walid Sadallah',
@@ -21,7 +21,7 @@ setup(
             "Programming Language :: Python :: 3",
             "Programming Language :: Python :: 3.7",
       ],
-      packages=["dynamodbgeo"],
+      packages=setuptools.find_packages(),
       include_package_data=True,
-      install_requires=["boto3","s2sphere"],
+      install_requires=["boto3>=1.11.8","s2sphere>=0.2.5"],
       )
