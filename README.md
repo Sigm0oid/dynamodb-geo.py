@@ -12,7 +12,7 @@ This project is an unofficial port of [awslabs/dynamodb-geo][dynamodb-geo], brin
 ```python
 pip install s2sphere
 pip install boto3
-pip install -i https://test.pypi.org/simple/ dynamodbgeo
+pip install dynamodbgeo
 ```
 
 ## Getting started
