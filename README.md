@@ -28,7 +28,7 @@ dynamodb = boto3.client('dynamodb', region_name='us-east-2')
 Next you must create an instance of `GeoDataManagerConfiguration` for each geospatial table you wish to interact with. This is a container for various options (see API below), but you must always provide a `DynamoDB` instance and a table name.
 
 ```python
-    config = dynamodbgeo.GeoDataManagerConfiguration(dynamodb, 'geo_test_8')
+config = dynamodbgeo.GeoDataManagerConfiguration(dynamodb, 'geo_test_8')
 ```
 
 Finally, you should instantiate a manager to query and write to the table using this config object.
@@ -38,7 +38,7 @@ geoDataManager = dynamodbgeo.GeoDataManager(config)
 ```
 
 ## Choosing a `hashKeyLength` (optimising for performance and cost)
-The `hashKeyLength` is the number of most significant digits (in base 10) of the 64-bit geo hash to use as the hash key. Larger numbers will allow small geographical areas to be spread across DynamoDB partitions, but at the cost of performance as more [queries][dynamodb-query] need to be executed for box/radius searches that span hash keys. See [these tests][hashkeylength-tests](TODO) for an idea of how query performance scales with `hashKeyLength` for different search radii.
+The `hashKeyLength` is the number of most significant digits (in base 10) of the 64-bit geo hash to use as the hash key. Larger numbers will allow small geographical areas to be spread across DynamoDB partitions, but at the cost of performance as more [queries][dynamodb-query] need to be executed for box/radius searches that span hash keys. See [these tests from the JS version][hashkeylength-tests](TODO) for an idea of how query performance scales with `hashKeyLength` for different search radii.
 
 If your data is sparse, a large number will mean more RCUs since more empty queries will be executed and each has a minimum cost. However if your data is dense and `hashKeyLength` too short, more RCUs will be needed to read a hash key and a higher proportion will be discarded by server-side filtering.
 
