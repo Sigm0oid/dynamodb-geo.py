@@ -21,6 +21,7 @@ First you'll need to import the AWS sdk and set up your DynamoDB connection:
 ```python
 import boto3
 import dynamodbgeo
+import uuid
 dynamodb = boto3.client('dynamodb', region_name='us-east-2')
 ```
 
