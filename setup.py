@@ -8,7 +8,7 @@ def readme():
 
 setup(
       name="dynamodbgeo",
-      version='0.3',
+      version='0.0.1',
       description='A python port of awslabs/dynamodb-geo, for easier geospatial data manipulation and querying in DynamoDB',
       url='https://github.com/Sigm0oid/dynamodb-geo.py',
       author='Hamza Rhibi & Walid Sadallah',
