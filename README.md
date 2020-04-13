@@ -10,7 +10,9 @@ This project is an unofficial port of [awslabs/dynamodb-geo][dynamodb-geo], brin
 ## Installation
 
 ```python
-pip install -i https://test.pypi.org/simple/ dynamodbgeo==0.1
+pip install s2sphere
+pip install boto3
+pip install -i https://test.pypi.org/simple/ dynamodbgeo
 ```
 
 ## Getting started
