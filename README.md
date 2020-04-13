@@ -196,9 +196,6 @@ TODO
 
 ## Limitations
 
-### No Delete and Update Item supported
-Currently, the library does not support update and delete item for now. The items for now can be deleted using AWS SDK [UpdateItem][updateitem] and [DeleteItem][deleteitem]
-
 ### No composite key support
 Currently, the library does not support composite keys. You may want to add tags such as restaurant, bar, and coffee shop, and search locations of a specific category; however, it is currently not possible. You need to create a table for each tag and store the items separately.
 
