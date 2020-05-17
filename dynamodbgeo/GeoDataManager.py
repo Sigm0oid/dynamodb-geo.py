@@ -4,7 +4,7 @@ Purpose: A wrapper on the top of DynamoDBManager for performing CRUD operation o
 """
 import GeoDataManagerConfiguration
 from DynamoDBManager import DynamoDBManager
-from model import PutPointInput,Covering,GetPointInput
+from model import PutPointInput, Covering, GetPointInput
 from s2 import *
 from s2sphere import LatLng as S2LatLng
 EARTH_RADIUS_METERS = 6367000.0
@@ -22,11 +22,10 @@ class GeoDataManager:
     def get_Point(self, getPointInput: 'getPointInput'):
         return self.dynamoDBManager.get_Point(getPointInput)
 
-    def update_Point(self,UpdateItemInput : 'UpdateItemInput'):
+    def update_Point(self, UpdateItemInput: 'UpdateItemInput'):
         return self.dynamoDBManager.update_Point(UpdateItemInput)
-        
 
-    def delete_Point(self,DeleteItemInput :'DeleteItemInput'):
+    def delete_Point(self, DeleteItemInput: 'DeleteItemInput'):
         return self.dynamoDBManager.delete_Point(DeleteItemInput)
 
     def dispatchQueries(self, covering: 'Covering', geoQueryInput: 'GeoQueryInput'):
@@ -56,7 +55,24 @@ class GeoDataManager:
         covering = Covering(
             self.config.S2RegionCoverer().get_covering(latLngRect))
         results = self.dispatchQueries(covering, QueryRadiusInput)
-        return self.filterByRadius(results, QueryRadiusInput)
+        filtered_results = self.filterByRadius(results, QueryRadiusInput)
+        if QueryRadiusInput.sort == True:
+            # Tuples list (distance to the center point, the point data returned from dynamoDB)
+            tuples = []
+            centerLatLng = S2LatLng.from_degrees(QueryRadiusInput.getCenterPoint(
+            ).getLatitude(), QueryRadiusInput.getCenterPoint().getLongitude())
+            for item in filtered_results:
+                geoJson = item[self.config.geoJsonAttributeName]["S"]
+                coordinates = geoJson.split(",")
+                latitude = float(coordinates[0])
+                longitude = float(coordinates[1])
+                latLng = S2LatLng.from_degrees(latitude, longitude)
+                tuples.append((centerLatLng.get_distance(
+                    latLng).radians * EARTH_RADIUS_METERS, item))
+            tuples.sort(key=lambda x: x[0])  # Sort the list by distance (x [0] is the distance)
+            return [item[1] for item in tuples]
+        else:
+            return filtered_results
 
     def filterByRadius(self, ItemList: 'points retrieved from dynamoDB', QueryRadiusInput: 'QueryRadiusRequest'):
         centerLatLng = S2LatLng.from_degrees(QueryRadiusInput.getCenterPoint(
