@@ -69,7 +69,7 @@ class GeoDataManager:
                 latLng = S2LatLng.from_degrees(latitude, longitude)
                 tuples.append((centerLatLng.get_distance(
                     latLng).radians * EARTH_RADIUS_METERS, item))
-            tuples.sort()  # Sort the list by distance
+            tuples.sort(key=lambda x: x[0])  # Sort the list by distance (x [0] is the distance)
             return [item[1] for item in tuples]
         else:
             return filtered_results

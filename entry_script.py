@@ -60,10 +60,35 @@ if __name__ == "__main__":
         dynamodbgeo.QueryRectangleRequest(
             dynamodbgeo.GeoPoint(36.878184, 10.242358),
             dynamodbgeo.GeoPoint(36.879317, 10.243648))))
-    print(" query raduis")
+    
+    
+    print(" Testing the put ITem inside circle radius")
+
+    geoDataManager.put_Point(dynamodbgeo.PutPointInput(
+        dynamodbgeo.GeoPoint(36.874419, 10.241062),
+        str(uuid.uuid4()),
+        PutItemInput))
+
+    geoDataManager.put_Point(dynamodbgeo.PutPointInput(
+        dynamodbgeo.GeoPoint(36.874507, 10.240857),
+        str(uuid.uuid4()),
+        PutItemInput))
+
+    geoDataManager.put_Point(dynamodbgeo.PutPointInput(
+        dynamodbgeo.GeoPoint(36.874617, 10.241441),
+        str(uuid.uuid4()),
+        PutItemInput))
+    
+    print(" Testing query raduis without sorting ")
     print(geoDataManager.queryRadius(
         dynamodbgeo.QueryRadiusRequest(
-            dynamodbgeo.GeoPoint(36.879131, 10.243057),
+            dynamodbgeo.GeoPoint(36.874444, 10.241059),
+            95, {}, sort=False)))
+
+    print(" Testing query raduis with sorting ")
+    print(geoDataManager.queryRadius(
+        dynamodbgeo.QueryRadiusRequest(
+            dynamodbgeo.GeoPoint(36.874444, 10.241059),
             95, {}, sort=True)))
 
     # define a dict of the item to input
