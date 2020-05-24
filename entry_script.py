@@ -24,7 +24,7 @@ if __name__ == "__main__":
     # define a dict of the item to input
     PutItemInput = {
         'Item': {
-            'Country': {'S': "Tunisia"},
+            'Country': {'S': "Italy"},
             'Capital': {'S': "Tunis"},
             'year': {'S': '2020'}
         },
@@ -52,14 +52,21 @@ if __name__ == "__main__":
         dynamodbgeo.GetPointInput(
             dynamodbgeo.GeoPoint(16, 16),
             "b385bbf9-581b-4df4-b5ad-4c0e3a0794b6"
-        )))
+        )))'
 
-    print(" Testing the query rectangle function")
+    print(" Testing the query rectangle function with QueryRectangleInput passed in parameters ")
+
+    QueryRectangleInput={
+        "FilterExpression": "Country = :val1",
+        "ExpressionAttributeValues": {
+            ":val1": {"S": "Italy"},
+        }
+    }
     # testing the query rectangle method
     print(geoDataManager.queryRectangle(
         dynamodbgeo.QueryRectangleRequest(
             dynamodbgeo.GeoPoint(36.878184, 10.242358),
-            dynamodbgeo.GeoPoint(36.879317, 10.243648))))
+            dynamodbgeo.GeoPoint(36.879317, 10.243648),QueryRectangleInput)))
     
     
     print(" Testing the put ITem inside circle radius")
@@ -79,18 +86,22 @@ if __name__ == "__main__":
         str(uuid.uuid4()),
         PutItemInput))
     
-    print(" Testing query raduis without sorting ")
+    
+    print(" Testing query raduis with sorting and filtring")
+
+    QueryRadiusInput={
+        "FilterExpression": "Country = :val1",
+        "ExpressionAttributeValues": {
+            ":val1": {"S": "Italy"},
+        }
+    }
+
     print(geoDataManager.queryRadius(
         dynamodbgeo.QueryRadiusRequest(
             dynamodbgeo.GeoPoint(36.874444, 10.241059),
-            95, {}, sort=False)))
+            95, QueryRadiusInput, sort=True)))
 
-    print(" Testing query raduis with sorting ")
-    print(geoDataManager.queryRadius(
-        dynamodbgeo.QueryRadiusRequest(
-            dynamodbgeo.GeoPoint(36.874444, 10.241059),
-            95, {}, sort=True)))
-
+    
     # define a dict of the item to input
     UpdateItemDict = {
         "UpdateExpression": "set Capital = :val1",
