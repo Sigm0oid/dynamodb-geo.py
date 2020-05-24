@@ -16,27 +16,30 @@ class DynamoDBManager:
         """
         Given a hash key and a min to max GeoHashrange it query the GSI to select the appropriate items to return
         """
-        response = self.config.dynamoDBClient.query(
-            TableName=self.config.tableName,
-            IndexName=self.config.geohashIndexName,
-            KeyConditionExpression='hashKey = :hashKey and ' +
-            str(self.config.geohashAttributeName) +
-            ' between :geohashMin and :geohashMax',
-            ExpressionAttributeValues={':hashKey': {'N': str(hashKey)}, ':geohashMax': {
-                'N': str(range.rangeMax)}, ':geohashMin': {'N': str(range.rangeMin)}}
-        )
-        data = response['Items']
+        params=queryInput
 
-        while 'LastEvaluatedKey' in response:
-            response = self.config.dynamoDBClient.query(
-                TableName=self.config.tableName,
-                IndexName=self.config.geohashIndexName,
-                KeyConditionExpression='hashKey = :hashKey and ' +
-                str(self.config.geohashAttributeName) +
-                ' between :geohashMin and :geohashMax',
-                ExpressionAttributeValues={':hashKey': {'N': str(hashKey)}, ':geohashMax': {
+        params['TableName']=self.config.tableName
+        params['IndexName']=self.config.geohashIndexName
+        
+        # As eyConditionExpressions must only contain one condition per key, customer passing KeyConditionExpression will be replaced automatically
+        params['KeyConditionExpression']='hashKey = :hashKey and ' + str(self.config.geohashAttributeName) +' between :geohashMin and :geohashMax'
+
+        if 'ExpressionAttributeValues' in queryInput.keys():
+            params['ExpressionAttributeValues'].update(  
+                {':hashKey': {'N': str(hashKey)}, ':geohashMax': {
                     'N': str(range.rangeMax)}, ':geohashMin': {'N': str(range.rangeMin)}}
             )
+        else:
+            params['ExpressionAttributeValues']={':hashKey': {'N': str(hashKey)}, ':geohashMax': {
+                    'N': str(range.rangeMax)}, ':geohashMin': {'N': str(range.rangeMin)}}
+            
+
+        response = self.config.dynamoDBClient.query(**params)
+        data = response['Items']
+
+        while 'LastEvaluatedKey' in response: 
+            params['ExclusiveStartKey']=response['LastEvaluatedKey']
+            response = self.config.dynamoDBClient.query(**params)
             data.extend(response['Items'])
         return data
 

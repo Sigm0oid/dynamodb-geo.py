@@ -160,25 +160,44 @@ geoDataManager.delete_Point(
 
 ## Rectangular queries
 
-Query by rectangle by specifying a `MinPoint` and `MaxPoint`.
+Query by rectangle by specifying a `MinPoint` and `MaxPoint`. You can also pass filtring criteria in a dictionary as explained in the example.
+#### NOTE: You cannot add filtring criteria related to the key attributes as they're used in the geo spacial filtring.
 
 ```python
 # Querying a rectangle
-query_rectangle_result=dynamodbgeo.QueryRectangleRequest(
-            dynamodbgeo.GeoPoint(36.878184, 10.242358), # min point
-            dynamodbgeo.GeoPoint(36.879317, 10.243648)))) # max point
+QueryRectangleInput={
+        "FilterExpression": "Country = :val1",
+        "ExpressionAttributeValues": {
+            ":val1": {"S": "Italy"},
+        }
+    }
+print(geoDataManager.queryRectangle(
+        dynamodbgeo.QueryRectangleRequest(
+            dynamodbgeo.GeoPoint(36.878184, 10.242358),
+            dynamodbgeo.GeoPoint(36.879317, 10.243648),QueryRectangleInput)))
+
 ```
 
 ## Radius queries
 
-Query by radius by specifying a `CenterPoint` and `RadiusInMeter`.
+Query by radius by specifying a `CenterPoint` and `RadiusInMeter`. You can also pass filtring criteria in a dictionary as explained in the example.
+
+#### NOTE: 
+Same as in query rectangle, you cannot add filtring criteria related to the key attributes as they're used in the geo spacial filtring.
 
 ```python
 # Querying 95 meter from the center point (36.879131, 10.243057)
+QueryRadiusInput={
+        "FilterExpression": "Country = :val1",
+        "ExpressionAttributeValues": {
+            ":val1": {"S": "Italy"},
+        }
+    }
+
 query_reduis_result=geoDataManager.queryRadius(
     dynamodbgeo.QueryRadiusRequest(
         dynamodbgeo.GeoPoint(36.879131, 10.243057), # center point
-        95, {}, sort = True)) # diameter
+        95, QueryRadiusInput, sort = True)) # diameter
 
 ```
 
