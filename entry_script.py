@@ -52,7 +52,7 @@ if __name__ == "__main__":
         dynamodbgeo.GetPointInput(
             dynamodbgeo.GeoPoint(16, 16),
             "b385bbf9-581b-4df4-b5ad-4c0e3a0794b6"
-        )))'
+        )))
 
     print(" Testing the query rectangle function with QueryRectangleInput passed in parameters ")
 
