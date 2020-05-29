@@ -56,7 +56,7 @@ if __name__ == "__main__":
 
     print(" Testing the query rectangle function with QueryRectangleInput passed in parameters ")
 
-    QueryRectangleInput={
+    QueryRectangleInput = {
         "FilterExpression": "Country = :val1",
         "ExpressionAttributeValues": {
             ":val1": {"S": "Italy"},
@@ -66,9 +66,8 @@ if __name__ == "__main__":
     print(geoDataManager.queryRectangle(
         dynamodbgeo.QueryRectangleRequest(
             dynamodbgeo.GeoPoint(36.878184, 10.242358),
-            dynamodbgeo.GeoPoint(36.879317, 10.243648),QueryRectangleInput)))
-    
-    
+            dynamodbgeo.GeoPoint(36.879317, 10.243648), QueryRectangleInput)))
+
     print(" Testing the put ITem inside circle radius")
 
     geoDataManager.put_Point(dynamodbgeo.PutPointInput(
@@ -85,11 +84,10 @@ if __name__ == "__main__":
         dynamodbgeo.GeoPoint(36.874617, 10.241441),
         str(uuid.uuid4()),
         PutItemInput))
-    
-    
+
     print(" Testing query raduis with sorting and filtring")
 
-    QueryRadiusInput={
+    QueryRadiusInput = {
         "FilterExpression": "Country = :val1",
         "ExpressionAttributeValues": {
             ":val1": {"S": "Italy"},
@@ -101,7 +99,6 @@ if __name__ == "__main__":
             dynamodbgeo.GeoPoint(36.874444, 10.241059),
             95, QueryRadiusInput, sort=True)))
 
-    
     # define a dict of the item to input
     UpdateItemDict = {
         "UpdateExpression": "set Capital = :val1",
