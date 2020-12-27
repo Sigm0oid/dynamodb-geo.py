@@ -9,7 +9,7 @@ def test_create_table():
         config = dynamodbgeo.GeoDataManagerConfiguration(
             dynamodb, table_name)
         geoDataManager = dynamodbgeo.GeoDataManager(config)
-        table_util = dynamodbgeo.GeoTableUtil(config)
+        table_util = dynamodbgeo.util.GeoTableUtil(config)
         create_table_input = table_util.getCreateTableRequest()
         # tweaking the base table parameters
         create_table_input["ProvisionedThroughput"]['ReadCapacityUnits'] = 5

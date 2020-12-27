@@ -17,9 +17,9 @@ def test_query_radius():
         table_util.create_table(create_table_input)
         PutItemInput = {
             'Item': {
-                'Country': {'S': "Italy"},
-                'Capital': {'S': "Tunis"},
-                'year': {'S': '2020'}
+                'Country': "Italy",
+                'Capital': "Tunis",
+                'year': '2020'
             },
             # ... Anything else to pass through to `putItem`, eg ConditionExpression
             'ConditionExpression': "attribute_not_exists(hashKey)"
@@ -36,14 +36,14 @@ def test_query_radius():
         QueryRadiusInput = {
             "FilterExpression": "Country = :val1",
             "ExpressionAttributeValues": {
-                ":val1": {"S": "Italy"},
+                ":val1": "Italy",
             }
         }
         result = geoDataManager.queryRadius(
             dynamodbgeo.QueryRadiusRequest(
                 dynamodbgeo.GeoPoint(36.542840, 9.662671),
                 200, QueryRadiusInput))
-        if len(result) != 1 or result[0]["rangeKey"]["S"] != "inside":
+        if len(result) != 1 or result[0]["rangeKey"] != "inside":
             assert False
         assert True
     except:

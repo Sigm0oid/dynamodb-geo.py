@@ -17,9 +17,9 @@ def test_query_radius_sort():
         table_util.create_table(create_table_input)
         PutItemInput = {
             'Item': {
-                'Country': {'S': "Italy"},
-                'Capital': {'S': "Tunis"},
-                'year': {'S': '2020'}
+                'Country': "Italy",
+                'Capital': "Tunis",
+                'year': '2020'
             },
             # ... Anything else to pass through to `putItem`, eg ConditionExpression
             'ConditionExpression': "attribute_not_exists(hashKey)"
@@ -39,14 +39,14 @@ def test_query_radius_sort():
         QueryRadiusInput = {
             "FilterExpression": "Country = :val1",
             "ExpressionAttributeValues": {
-                ":val1": {"S": "Italy"},
+                ":val1": "Italy",
             }
         }
         result = geoDataManager.queryRadius(
             dynamodbgeo.QueryRadiusRequest(
                 dynamodbgeo.GeoPoint(36.874444, 10.241059),
                 95, QueryRadiusInput, sort=True))
-        if len(result) != 3 or result[0]["rangeKey"]["S"] != "1" or result[1]["rangeKey"]["S"] != "2" or result[2]["rangeKey"]["S"] != "3":
+        if len(result) != 3 or result[0]["rangeKey"] != "1" or result[1]["rangeKey"] != "2" or result[2]["rangeKey"] != "3":
             assert False
         assert True
     except:

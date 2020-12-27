@@ -24,9 +24,9 @@ if __name__ == "__main__":
     # define a dict of the item to input
     PutItemInput = {
         'Item': {
-            'Country': {'S': "Italy"},
-            'Capital': {'S': "Tunis"},
-            'year': {'S': '2020'}
+            'Country': "Italy",
+            'Capital': "Tunis",
+            'year': '2020'
         },
         # ... Anything else to pass through to `putItem`, eg ConditionExpression
         'ConditionExpression': "attribute_not_exists(hashKey)"
@@ -59,7 +59,7 @@ if __name__ == "__main__":
     QueryRectangleInput = {
         "FilterExpression": "Country = :val1",
         "ExpressionAttributeValues": {
-            ":val1": {"S": "Italy"},
+            ":val1": "Italy",
         }
     }
     # testing the query rectangle method
@@ -90,7 +90,7 @@ if __name__ == "__main__":
     QueryRadiusInput = {
         "FilterExpression": "Country = :val1",
         "ExpressionAttributeValues": {
-            ":val1": {"S": "Italy"},
+            ":val1": "Italy",
         }
     }
 

@@ -96,9 +96,9 @@ table_util.create_table(create_table_input)
 
 PutItemInput = {
         'Item': {
-            'Country': {'S': "Tunisia"},
-            'Capital': {'S': "Tunis"},
-            'year': {'S': '2020'}
+            'Country': { "Tunisia"},
+            'Capital': { "Tunis"},
+            'year': { '2020'}
         },
         'ConditionExpression': "attribute_not_exists(hashKey)" # ... Anything else to pass through to `putItem`, eg ConditionExpression
 
@@ -168,7 +168,7 @@ Query by rectangle by specifying a `MinPoint` and `MaxPoint`. You can also pass 
 QueryRectangleInput={
         "FilterExpression": "Country = :val1",
         "ExpressionAttributeValues": {
-            ":val1": {"S": "Italy"},
+            ":val1": "Italy",
         }
     }
 print(geoDataManager.queryRectangle(
@@ -190,7 +190,7 @@ Same as in query rectangle, you cannot add filtring criteria related to the key 
 QueryRadiusInput={
         "FilterExpression": "Country = :val1",
         "ExpressionAttributeValues": {
-            ":val1": {"S": "Italy"},
+            ":val1": "Italy",
         }
     }
 
