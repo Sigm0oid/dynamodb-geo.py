@@ -19,7 +19,6 @@ class DynamoDBManager:
         """
         params = queryInput
 
-        params['TableName'] = self.config.tableName
         params['IndexName'] = self.config.geohashIndexName
 
         # As eyConditionExpressions must only contain one condition per key, customer passing KeyConditionExpression will be replaced automatically
@@ -28,19 +27,19 @@ class DynamoDBManager:
 
         if 'ExpressionAttributeValues' in queryInput.keys():
             params['ExpressionAttributeValues'].update(
-                {':hashKey': str(hashKey), ':geohashMax':
-                    str(range.rangeMax), ':geohashMin': str(range.rangeMin)}
+                {':hashKey': hashKey, ':geohashMax':
+                    range.rangeMax, ':geohashMin': range.rangeMin}
             )
         else:
-            params['ExpressionAttributeValues'] = {':hashKey': str(hashKey), ':geohashMax':
-                                                   str(range.rangeMax), ':geohashMin': str(range.rangeMin)}
+            params['ExpressionAttributeValues'] = {':hashKey': hashKey, ':geohashMax':
+                                                   range.rangeMax, ':geohashMin': range.rangeMin}
 
-        response = self.config.dynamoDBClient.query(**params)
+        response = self.config.table.query(**params)
         data = response['Items']
 
         while 'LastEvaluatedKey' in response:
             params['ExclusiveStartKey'] = response['LastEvaluatedKey']
-            response = self.config.dynamoDBClient.query(**params)
+            response = self.config.table.query(**params)
             data.extend(response['Items'])
         return data
 
@@ -53,19 +52,16 @@ class DynamoDBManager:
         response = ""
         params = putPointInput.ExtraFields.copy()
 
-        params['TableName'] = self.config.tableName
-
         if('Item' not in putPointInput.ExtraFields.keys()):
             params['Item'] = {}
 
-        params['Item'][self.config.hashKeyAttributeName] = str(hashKey)
+        params['Item'][self.config.hashKeyAttributeName] = hashKey
         params['Item'][self.config.rangeKeyAttributeName] = putPointInput.RangeKeyValue
-        params['Item'][self.config.geohashAttributeName] = str(geohash)
+        params['Item'][self.config.geohashAttributeName] = geohash
         params['Item'][self.config.geoJsonAttributeName] = "{},{}".format(
             putPointInput.GeoPoint.latitude, putPointInput.GeoPoint.longitude)
-
         try:
-            response = self.config.dynamoDBClient.put_item(**params)
+            response = self.config.table.put_item(Item=params['Item'])
         except Exception as e:
             print("The following error occured during the item insertion :{}".format(e))
             response = "Error"
@@ -79,12 +75,10 @@ class DynamoDBManager:
         hashKey = S2Manager().generateHashKey(geohash, self.config.hashKeyLength)
         response = ""
         try:
-            response = self.config.dynamoDBClient.get_item(
-                TableName=self.config.tableName,
+            response = self.config.table.get_item(
                 Key={
-                    self.config.hashKeyAttributeName: str(hashKey),
-                    self.config.rangeKeyAttributeName: {
-                        "S": getPointInput.RangeKeyValue}
+                    self.config.hashKeyAttributeName: hashKey,
+                    self.config.rangeKeyAttributeName: getPointInput.RangeKeyValue
                 }
             )
         except Exception as e:
@@ -101,17 +95,15 @@ class DynamoDBManager:
         response = ""
         params = UpdateItemInput.ExtraFields.copy()
 
-        params['TableName'] = self.config.tableName
-
         if('Key' not in UpdateItemInput.ExtraFields.keys()):
             params['Key'] = {}
 
-        params['Key'][self.config.hashKeyAttributeName] = str(hashKey)
+        params['Key'][self.config.hashKeyAttributeName] = hashKey
         params['Key'][self.config.rangeKeyAttributeName] = UpdateItemInput.RangeKeyValue
 
         # TODO Geohash and geoJson cannot be updated. For now no control over that need to be added
         try:
-            response = self.config.dynamoDBClient.update_item(**params)
+            response = self.config.table.update_item(**params)
         except Exception as e:
             print("The following error occured during the item update :{}".format(e))
             response = "Error"
@@ -126,15 +118,13 @@ class DynamoDBManager:
         response = ""
         params = DeleteItemInput.ExtraFields.copy()
 
-        params['TableName'] = self.config.tableName
-
         if('Key' not in DeleteItemInput.ExtraFields.keys()):
             params['Key'] = {}
 
-        params['Key'][self.config.hashKeyAttributeName] = str(hashKey)
+        params['Key'][self.config.hashKeyAttributeName] = hashKey
         params['Key'][self.config.rangeKeyAttributeName] = DeleteItemInput.RangeKeyValue
         try:
-            response = self.config.dynamoDBClient.delete_item(**params)
+            response = self.config.table.delete_item(**params)
         except Exception as e:
             print("The following error occured during the item delete :{}".format(e))
             response = "Error"

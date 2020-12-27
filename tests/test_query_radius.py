@@ -1,15 +1,18 @@
-import dynamodbgeo
-from vars import dynamodb
 import uuid
+
+import dynamodbgeo
+from dynamodbgeo.util import GeoTableUtil
+
+from vars import dynamodbResource
 
 
 def test_query_radius():
     try:
         table_name = str(uuid.uuid4())
         config = dynamodbgeo.GeoDataManagerConfiguration(
-            dynamodb, table_name)
+            table_name, dynamodbResource)
         geoDataManager = dynamodbgeo.GeoDataManager(config)
-        table_util = dynamodbgeo.GeoTableUtil(config)
+        table_util = GeoTableUtil(config)
         create_table_input = table_util.getCreateTableRequest()
         # tweaking the base table parameters
         create_table_input["ProvisionedThroughput"]['ReadCapacityUnits'] = 5

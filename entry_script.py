@@ -8,8 +8,9 @@ Entry point script for testing
 
 if __name__ == "__main__":
     # initiat dynamodb service ressource,
-    dynamodb = boto3.client('dynamodb', region_name='us-east-2')
-    config = dynamodbgeo.GeoDataManagerConfiguration(dynamodb, 'geo_test_8')
+    dynamodbResource = boto3.resource('dynamodb', region_name='us-east-2')
+    config = dynamodbgeo.GeoDataManagerConfiguration(
+        'geo_test_8', dynamodbResource)
     geoDataManager = dynamodbgeo.GeoDataManager(config)
 
     table_util = dynamodbgeo.GeoTableUtil(config)
@@ -104,8 +105,8 @@ if __name__ == "__main__":
         "UpdateExpression": "set Capital = :val1",
         "ConditionExpression": "Capital = :val2",
         "ExpressionAttributeValues": {
-            ":val1": {"S": "Tunis"},
-            ":val2": {"S": "Ariana"}
+            ":val1": "Tunis",
+            ":val2": "Ariana"
         },
         "ReturnValues": "ALL_NEW"
     }
