@@ -25,7 +25,7 @@ First you'll need to import the AWS sdk and set up your DynamoDB connection:
 import boto3
 import dynamodbgeo
 import uuid
-dynamodb = boto3.client('dynamodb', region_name='us-east-2')
+dynamodb = boto3.resource('dynamodb', region_name='us-east-2')
 ```
 
 Next you must create an instance of `GeoDataManagerConfiguration` for each geospatial table you wish to interact with. This is a container for various options (see API below), but you must always provide a `DynamoDB` instance and a table name.
@@ -96,9 +96,9 @@ table_util.create_table(create_table_input)
 
 PutItemInput = {
         'Item': {
-            'Country': {'S': "Tunisia"},
-            'Capital': {'S': "Tunis"},
-            'year': {'S': '2020'}
+            'Country': { "Tunisia"},
+            'Capital': { "Tunis"},
+            'year': { '2020'}
         },
         'ConditionExpression': "attribute_not_exists(hashKey)" # ... Anything else to pass through to `putItem`, eg ConditionExpression
 
@@ -127,8 +127,8 @@ UpdateItemDict= { # Dont provide TableName and Key, they are filled in for you
         "UpdateExpression": "set Capital = :val1",
         "ConditionExpression": "Capital = :val2",
         "ExpressionAttributeValues": {
-            ":val1": {"S": "Tunis"},
-            ":val2": {"S": "Ariana"}
+            ":val1": "Tunis",
+            ":val2": "Ariana"
         },
         "ReturnValues": "ALL_NEW"
 }
@@ -168,7 +168,7 @@ Query by rectangle by specifying a `MinPoint` and `MaxPoint`. You can also pass 
 QueryRectangleInput={
         "FilterExpression": "Country = :val1",
         "ExpressionAttributeValues": {
-            ":val1": {"S": "Italy"},
+            ":val1": "Italy",
         }
     }
 print(geoDataManager.queryRectangle(
@@ -190,7 +190,7 @@ Same as in query rectangle, you cannot add filtring criteria related to the key 
 QueryRadiusInput={
         "FilterExpression": "Country = :val1",
         "ExpressionAttributeValues": {
-            ":val1": {"S": "Italy"},
+            ":val1": "Italy",
         }
     }
 
@@ -272,3 +272,12 @@ The Geohash used in this library is roughly centimeter precision. Therefore, the
 [dynamodb-query]: http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html
 [hashkeylength-tests]: https://github.com/rh389/dynamodb-geo.js/blob/master/test/integration/hashKeyLength.ts
 [choosing-hashkeylength]: #choosing-a-hashkeylength-optimising-for-performance-and-cost
+
+### Running Tests locally on MacOS
+
+```sh
+brew install --cask dynamodb-local
+dynamodb-local
+```
+
+With a shell running dynamodb local on port 8000 then the tests can be run!

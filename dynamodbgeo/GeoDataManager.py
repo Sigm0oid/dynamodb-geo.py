@@ -62,14 +62,15 @@ class GeoDataManager:
             centerLatLng = S2LatLng.from_degrees(QueryRadiusInput.getCenterPoint(
             ).getLatitude(), QueryRadiusInput.getCenterPoint().getLongitude())
             for item in filtered_results:
-                geoJson = item[self.config.geoJsonAttributeName]["S"]
+                geoJson = item[self.config.geoJsonAttributeName]
                 coordinates = geoJson.split(",")
                 latitude = float(coordinates[0])
                 longitude = float(coordinates[1])
                 latLng = S2LatLng.from_degrees(latitude, longitude)
                 tuples.append((centerLatLng.get_distance(
                     latLng).radians * EARTH_RADIUS_METERS, item))
-            tuples.sort(key=lambda x: x[0])  # Sort the list by distance (x [0] is the distance)
+            # Sort the list by distance (x [0] is the distance)
+            tuples.sort(key=lambda x: x[0])
             return [item[1] for item in tuples]
         else:
             return filtered_results
@@ -80,7 +81,7 @@ class GeoDataManager:
         radiusInMeter = QueryRadiusInput.getRadiusInMeter()
         result = []
         for item in ItemList:
-            geoJson = item[self.config.geoJsonAttributeName]["S"]
+            geoJson = item[self.config.geoJsonAttributeName]
             coordinates = geoJson.split(",")
             latitude = float(coordinates[0])
             longitude = float(coordinates[1])
@@ -94,7 +95,7 @@ class GeoDataManager:
             QueryRectangleInput)
         result = []
         for item in ItemList:
-            geoJson = item[self.config.geoJsonAttributeName]["S"]
+            geoJson = item[self.config.geoJsonAttributeName]
             coordinates = geoJson.split(",")
             latitude = float(coordinates[0])
             longitude = float(coordinates[1])

@@ -1,6 +1,6 @@
 
 """
-Purpose: A signle point of entry for all the table and dynamodb client configuration
+Purpose: A signle point of entry for all the table and dynamodb resource configuration
 """
 from s2sphere import RegionCoverer as S2RegionCoverer
 
@@ -11,9 +11,10 @@ class GeoDataManagerConfiguration:
 
     geohashIndexName = "geohash-index"  # name of the LSI
 
-    def __init__(self, dynamoDBClient: 'dynamoDB client', tableName: str):
-        self.dynamoDBClient = dynamoDBClient  # dynamodb client taken from aws sdk
+    def __init__(self, tableName: str, dynamodbResource):
         self.tableName = tableName
+        self.dynamodbResource = dynamodbResource
+        self.table = dynamodbResource.Table(tableName)
         self.S2RegionCoverer = S2RegionCoverer  # this is form the s2 library
         self.hashKeyAttributeName = "hashKey"
         self.rangeKeyAttributeName = "rangeKey"

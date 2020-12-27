@@ -8,8 +8,9 @@ Entry point script for testing
 
 if __name__ == "__main__":
     # initiat dynamodb service ressource,
-    dynamodb = boto3.client('dynamodb', region_name='us-east-2')
-    config = dynamodbgeo.GeoDataManagerConfiguration(dynamodb, 'geo_test_8')
+    dynamodbResource = boto3.resource('dynamodb', region_name='us-east-2')
+    config = dynamodbgeo.GeoDataManagerConfiguration(
+        'geo_test_8', dynamodbResource)
     geoDataManager = dynamodbgeo.GeoDataManager(config)
 
     table_util = dynamodbgeo.GeoTableUtil(config)
@@ -24,9 +25,9 @@ if __name__ == "__main__":
     # define a dict of the item to input
     PutItemInput = {
         'Item': {
-            'Country': {'S': "Italy"},
-            'Capital': {'S': "Tunis"},
-            'year': {'S': '2020'}
+            'Country': "Italy",
+            'Capital': "Tunis",
+            'year': '2020'
         },
         # ... Anything else to pass through to `putItem`, eg ConditionExpression
         'ConditionExpression': "attribute_not_exists(hashKey)"
@@ -59,7 +60,7 @@ if __name__ == "__main__":
     QueryRectangleInput = {
         "FilterExpression": "Country = :val1",
         "ExpressionAttributeValues": {
-            ":val1": {"S": "Italy"},
+            ":val1": "Italy",
         }
     }
     # testing the query rectangle method
@@ -90,7 +91,7 @@ if __name__ == "__main__":
     QueryRadiusInput = {
         "FilterExpression": "Country = :val1",
         "ExpressionAttributeValues": {
-            ":val1": {"S": "Italy"},
+            ":val1": "Italy",
         }
     }
 
@@ -104,8 +105,8 @@ if __name__ == "__main__":
         "UpdateExpression": "set Capital = :val1",
         "ConditionExpression": "Capital = :val2",
         "ExpressionAttributeValues": {
-            ":val1": {"S": "Tunis"},
-            ":val2": {"S": "Ariana"}
+            ":val1": "Tunis",
+            ":val2": "Ariana"
         },
         "ReturnValues": "ALL_NEW"
     }
