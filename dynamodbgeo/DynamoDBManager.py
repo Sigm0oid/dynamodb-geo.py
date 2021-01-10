@@ -28,12 +28,11 @@ class DynamoDBManager:
         if 'ExpressionAttributeValues' in queryInput.keys():
             params['ExpressionAttributeValues'].update(
                 {':hashKey': hashKey, ':geohashMax':
-                    range.rangeMax, ':geohashMin': range.rangeMin}
+                    int(range.rangeMax), ':geohashMin': int(range.rangeMin)}
             )
         else:
             params['ExpressionAttributeValues'] = {':hashKey': hashKey, ':geohashMax':
-                                                   range.rangeMax, ':geohashMin': range.rangeMin}
-
+                                                   int(range.rangeMax), ':geohashMin': int(range.rangeMin)}
         response = self.config.table.query(**params)
         data = response['Items']
 
