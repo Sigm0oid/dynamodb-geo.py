@@ -32,8 +32,8 @@ class S2Util:
             (centerLatLng.get_distance(latReferenceLatLng).radians * EARTH_RADIUS_METERS)
         lngForRadius = radiusInMeter / \
             (centerLatLng.get_distance(lngReferenceLatLng).radians * EARTH_RADIUS_METERS)
-        minLatLng = S2LatLng.from_degrees(centerPoint.getLatitude() - latForRadius,
-                                          centerPoint.getLongitude() - lngForRadius)
-        maxLatLng = S2LatLng.from_degrees(centerPoint.getLatitude() + latForRadius,
-                                          centerPoint.getLongitude() + lngForRadius)
+        minLatLng = S2LatLng.from_degrees(max(centerPoint.getLatitude() - latForRadius, -90),
+                                          max(centerPoint.getLongitude() - lngForRadius, -180))
+        maxLatLng = S2LatLng.from_degrees(min(centerPoint.getLatitude() + latForRadius, 90),
+                                          min(centerPoint.getLongitude() + lngForRadius, 180))
         return S2LatLngRect(minLatLng, maxLatLng)
