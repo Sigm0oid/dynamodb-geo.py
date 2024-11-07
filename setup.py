@@ -23,7 +23,7 @@ setup(
             "Programming Language :: Python :: 3",
             "Programming Language :: Python :: 3.7",
     ],
-    packages=setuptools.find_packages(),
+    packages=setuptools.find_packages(exclude=["tests"]),
     include_package_data=True,
     install_requires=["boto3>=1.11.8", "s2sphere>=0.2.5"],
 )
