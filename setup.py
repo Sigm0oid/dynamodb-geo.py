@@ -1,5 +1,4 @@
-from setuptools import setup
-import setuptools
+from setuptools import setup, find_packages
 
 
 def readme():
@@ -20,10 +19,10 @@ setup(
     long_description_content_type="text/markdown",
     classifiers=[
         "License :: OSI Approved :: MIT License",
-            "Programming Language :: Python :: 3",
-            "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.7",
     ],
-    packages=setuptools.find_packages(exclude=["tests"]),
+    packages=find_packages(exclude=["tests", "tests.*"]),
     include_package_data=True,
     install_requires=["boto3>=1.11.8", "s2sphere>=0.2.5"],
 )
