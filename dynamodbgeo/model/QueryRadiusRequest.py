@@ -6,7 +6,7 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
 class QueryRadiusRequest(GeoQueryInput):
 
-    def __init__(self, centerPoint: 'GeoPoint', radiusInMeter: int, query_input_dict: dict = {}, sort: bool = False):
+    def __init__(self, centerPoint: 'GeoPoint', radiusInMeter: int, query_input_dict: dict = None, sort: bool = False):
         GeoQueryInput.__init__(self, query_input_dict)
         self.centerPoint = centerPoint
         self.radiusInMeter = radiusInMeter

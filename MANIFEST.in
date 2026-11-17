@@ -1,0 +1,4 @@
+include LICENSE
+include README.md
+prune tests
+global-exclude .DS_Store *.py[cod] __pycache__

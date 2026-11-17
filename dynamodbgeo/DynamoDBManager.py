@@ -2,6 +2,8 @@
 Purpose: This class contains all the operation to perform on the DynamoDB table
 
 """
+import copy
+
 from boto3.dynamodb.conditions import Attr, Key
 
 from s2 import S2Manager
@@ -12,46 +14,63 @@ class DynamoDBManager:
     def __init__(self, config):
         self.config = config
 
-    # for now we're not taking params passed into queryInput in consideration
+    def _buildQueryParams(self, queryInput, hashKey: int, range: int, exclusiveStartKey=None):
+        params = copy.deepcopy(queryInput) if queryInput else {}
+        params['IndexName'] = self.config.geohashIndexName
+
+        if exclusiveStartKey is not None:
+            params['ExclusiveStartKey'] = copy.deepcopy(exclusiveStartKey)
+        else:
+            params.pop('ExclusiveStartKey', None)
+
+        # KeyConditionExpressions must only contain one condition per key; any caller KeyConditionExpression is replaced automatically
+        params['KeyConditionExpression'] = (
+            str(self.config.hashKeyAttributeName) + ' = :hashKey and ' +
+            str(self.config.geohashAttributeName) + ' between :geohashMin and :geohashMax'
+        )
+
+        expr_values = dict(params.get('ExpressionAttributeValues') or {})
+        expr_values.update({
+            ':hashKey': hashKey,
+            ':geohashMax': int(range.rangeMax),
+            ':geohashMin': int(range.rangeMin),
+        })
+        params['ExpressionAttributeValues'] = expr_values
+        return params
+
+    def queryGeohashPage(self, queryInput, hashKey: int, range: int, exclusiveStartKey=None):
+        """
+        Query a single DynamoDB page for a geohash range, returning (items, last_evaluated_key).
+        """
+        params = self._buildQueryParams(
+            queryInput, hashKey, range, exclusiveStartKey=exclusiveStartKey
+        )
+        response = self.config.table.query(**params)
+        return list(response.get('Items', [])), response.get('LastEvaluatedKey')
+
     def queryGeohash(self, queryInput, hashKey: int, range: int):
         """
         Given a hash key and a min to max GeoHashrange it query the GSI to select the appropriate items to return
         """
-        params = queryInput
+        data, last_evaluated_key = self.queryGeohashPage(queryInput, hashKey, range)
 
-        params['IndexName'] = self.config.geohashIndexName
-
-        # As eyConditionExpressions must only contain one condition per key, customer passing KeyConditionExpression will be replaced automatically
-        params['KeyConditionExpression'] = str(self.config.hashKeyAttributeName) + ' = :hashKey and ' + str(
-            self.config.geohashAttributeName) + ' between :geohashMin and :geohashMax'
-
-        if 'ExpressionAttributeValues' in queryInput.keys():
-            params['ExpressionAttributeValues'].update(
-                {':hashKey': hashKey, ':geohashMax':
-                    int(range.rangeMax), ':geohashMin': int(range.rangeMin)}
+        while last_evaluated_key is not None:
+            items, last_evaluated_key = self.queryGeohashPage(
+                queryInput, hashKey, range, exclusiveStartKey=last_evaluated_key
             )
-        else:
-            params['ExpressionAttributeValues'] = {':hashKey': hashKey, ':geohashMax':
-                                                   int(range.rangeMax), ':geohashMin': int(range.rangeMin)}
-        response = self.config.table.query(**params)
-        data = response['Items']
-
-        while 'LastEvaluatedKey' in response:
-            params['ExclusiveStartKey'] = response['LastEvaluatedKey']
-            response = self.config.table.query(**params)
-            data.extend(response['Items'])
+            data.extend(items)
         return data
 
     def put_Point(self, putPointInput: 'PutPointInput'):
         """
-        The dict in Item put_item call, should contains a dict with string as a key and a string as a value: {"N": "123"}
+        Put a point item into the DynamoDB table, forwarding any additional put_item parameters (e.g. ConditionExpression).
         """
         geohash = S2Manager().generateGeohash(putPointInput.GeoPoint)
         hashKey = S2Manager().generateHashKey(geohash, self.config.hashKeyLength)
         response = ""
-        params = putPointInput.ExtraFields.copy()
+        params = copy.deepcopy(putPointInput.ExtraFields) if putPointInput.ExtraFields else {}
 
-        if('Item' not in putPointInput.ExtraFields.keys()):
+        if 'Item' not in params:
             params['Item'] = {}
 
         params['Item'][self.config.hashKeyAttributeName] = hashKey
@@ -60,7 +79,7 @@ class DynamoDBManager:
         params['Item'][self.config.geoJsonAttributeName] = "{},{}".format(
             putPointInput.GeoPoint.latitude, putPointInput.GeoPoint.longitude)
         try:
-            response = self.config.table.put_item(Item=params['Item'])
+            response = self.config.table.put_item(**params)
         except Exception as e:
             print("The following error occured during the item insertion :{}".format(e))
             response = "Error"
@@ -68,7 +87,7 @@ class DynamoDBManager:
 
     def get_Point(self, getPointInput: 'GetPointInput'):
         """
-        The dict in Key get_item call, should contains a dict with string as a key and a string as a value: {"N": "123"}
+        Retrieve a point item by GeoPoint and RangeKeyValue.
         """
         geohash = S2Manager().generateGeohash(getPointInput.GeoPoint)
         hashKey = S2Manager().generateHashKey(geohash, self.config.hashKeyLength)
@@ -87,14 +106,14 @@ class DynamoDBManager:
 
     def update_Point(self, UpdateItemInput: 'UpdateItemInput'):
         """
-        The dict in Item Update call, should contains a dict with string as a key and a string as a value: {"N": "123"}
+        Update an existing point item in the DynamoDB table.
         """
         geohash = S2Manager().generateGeohash(UpdateItemInput.GeoPoint)
         hashKey = S2Manager().generateHashKey(geohash, self.config.hashKeyLength)
         response = ""
-        params = UpdateItemInput.ExtraFields.copy()
+        params = copy.deepcopy(UpdateItemInput.ExtraFields) if UpdateItemInput.ExtraFields else {}
 
-        if('Key' not in UpdateItemInput.ExtraFields.keys()):
+        if 'Key' not in params:
             params['Key'] = {}
 
         params['Key'][self.config.hashKeyAttributeName] = hashKey
@@ -110,14 +129,14 @@ class DynamoDBManager:
 
     def delete_Point(self, DeleteItemInput: 'DeleteItemInput'):
         """
-        The dict in Item Update call, should contains a dict with string as a key and a string as a value: {"N": "123"}
+        Delete a point item from the DynamoDB table.
         """
         geohash = S2Manager().generateGeohash(DeleteItemInput.GeoPoint)
         hashKey = S2Manager().generateHashKey(geohash, self.config.hashKeyLength)
         response = ""
-        params = DeleteItemInput.ExtraFields.copy()
+        params = copy.deepcopy(DeleteItemInput.ExtraFields) if DeleteItemInput.ExtraFields else {}
 
-        if('Key' not in DeleteItemInput.ExtraFields.keys()):
+        if 'Key' not in params:
             params['Key'] = {}
 
         params['Key'][self.config.hashKeyAttributeName] = hashKey

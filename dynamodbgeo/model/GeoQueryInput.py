@@ -4,6 +4,9 @@ Class to define the required input fields as defined in DynamoDB queryInput inte
 """
 
 
+import copy
+
+
 class GeoQueryInput:
-    def __init__(self, query_input_dict: dict = {}):
-        self.QueryInput = query_input_dict
+    def __init__(self, query_input_dict: dict = None):
+        self.QueryInput = copy.deepcopy(query_input_dict) if query_input_dict is not None else {}

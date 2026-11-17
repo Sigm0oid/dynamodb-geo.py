@@ -12,6 +12,8 @@ class GeoDataManagerConfiguration:
     geohashIndexName = "geohash-index"  # name of the LSI
 
     def __init__(self, tableName: str, dynamodbResource):
+        if not isinstance(tableName, str) and isinstance(dynamodbResource, str):
+            tableName, dynamodbResource = dynamodbResource, tableName
         self.tableName = tableName
         self.dynamodbResource = dynamodbResource
         self.table = dynamodbResource.Table(tableName)

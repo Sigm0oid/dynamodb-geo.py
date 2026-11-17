@@ -28,10 +28,10 @@ import uuid
 dynamodb = boto3.resource('dynamodb', region_name='us-east-2')
 ```
 
-Next you must create an instance of `GeoDataManagerConfiguration` for each geospatial table you wish to interact with. This is a container for various options (see API below), but you must always provide a `DynamoDB` instance and a table name.
+Next you must create an instance of `GeoDataManagerConfiguration` for each geospatial table you wish to interact with. This is a container for various options (see API below), taking the table name and your `DynamoDB` service resource instance:
 
 ```python
-config = dynamodbgeo.GeoDataManagerConfiguration(dynamodb, 'geo_test_8')
+config = dynamodbgeo.GeoDataManagerConfiguration('geo_test_8', dynamodb)
 ```
 
 Finally, you should instantiate a manager to query and write to the table using this config object.
@@ -66,11 +66,11 @@ Note that the [Java version][dynamodb-geo] uses a `hashKeyLength` of `6` by defa
 
 This is an important early choice, since changing your `hashKeyLength` will mean recreating your data.
 
-## Creating a table
+## Creating and deleting a table
 
-`GeoTableUtil` has a static method `getCreateTableRequest` for helping you prepare a [DynamoDB CreateTable request][createtable] request, given a `GeoDataManagerConfiguration`.
+`GeoTableUtil` provides `getCreateTableRequest` for helping you prepare a [DynamoDB CreateTable request][createtable], given a `GeoDataManagerConfiguration`, as well as `create_table` and `delete_table` helpers.
 
-You can modify this request as desired before executing it using AWS's DynamoDB SDK.
+You can modify this request as desired before executing it.
 
 Example:
 
@@ -80,35 +80,35 @@ config.hashKeyLength = 3
 
 # Use GeoTableUtil to help construct a CreateTableInput.
 table_util = dynamodbgeo.GeoTableUtil(config)
-create_table_input=table_util.getCreateTableRequest()
+create_table_input = table_util.getCreateTableRequest()
 
-#tweaking the base table parameters as a dict
-create_table_input["ProvisionedThroughput"]['ReadCapacityUnits']=5
+# Tweaking the base table parameters as a dict
+create_table_input["ProvisionedThroughput"]['ReadCapacityUnits'] = 5
 
 # Use GeoTableUtil to create the table
 table_util.create_table(create_table_input)
+
+# Later, to delete the table:
+# table_util.delete_table()
 ```
 
 ## Adding data
 
 ```python
-#preparing non key attributes for the item to add
-
+# Preparing non-key attributes for the item to add
 PutItemInput = {
-        'Item': {
-            'Country': { "Tunisia"},
-            'Capital': { "Tunis"},
-            'year': { '2020'}
-        },
-        'ConditionExpression': "attribute_not_exists(hashKey)" # ... Anything else to pass through to `putItem`, eg ConditionExpression
-
+    'Item': {
+        'Country': "Tunisia",
+        'Capital': "Tunis",
+        'year': '2020'
+    },
+    'ConditionExpression': "attribute_not_exists(hashKey)" # ... Anything else to pass through to `put_item`, eg ConditionExpression
 }
 geoDataManager.put_Point(dynamodbgeo.PutPointInput(
-        dynamodbgeo.GeoPoint(36.879163, 10.243120), # latitude then latitude longitude
-         str( uuid.uuid4()), # Use this to ensure uniqueness of the hash/range pairs.
-         PutItemInput # pass the dict here
-        ))
-
+    dynamodbgeo.GeoPoint(36.879163, 10.243120), # latitude then longitude
+    str(uuid.uuid4()), # Use this to ensure uniqueness of the hash/range pairs.
+    PutItemInput # pass the dict here
+))
 ```
 
 See also [DynamoDB PutItem request][putitem]
@@ -194,12 +194,36 @@ QueryRadiusInput={
         }
     }
 
-query_reduis_result=geoDataManager.queryRadius(
+query_radius_result = geoDataManager.queryRadius(
     dynamodbgeo.QueryRadiusRequest(
         dynamodbgeo.GeoPoint(36.879131, 10.243057), # center point
-        95, QueryRadiusInput, sort = True)) # diameter
-
+        95, QueryRadiusInput, sort=True)) # radius in meters
 ```
+
+## Pagination
+
+Use `queryRectanglePaginated` or `queryRadiusPaginated` to retrieve geospatial query results in pages using `limit` and `next_token`:
+
+```python
+next_token = None
+while True:
+    page = geoDataManager.queryRadiusPaginated(
+        dynamodbgeo.QueryRadiusRequest(
+            dynamodbgeo.GeoPoint(36.879131, 10.243057),
+            500,
+            QueryRadiusInput,
+            sort=False,
+        ),
+        limit=25,
+        next_token=next_token,
+    )
+    items = page["Items"]
+    next_token = page["NextToken"]
+    if not next_token:
+        break
+```
+
+> **Note:** When `sort=False` (and for `queryRectanglePaginated`), pagination streams lazily across S2 geohash ranges and DynamoDB pages, stopping as soon as `limit` matching points are collected to conserve Read Capacity Units and memory. When `sort=True` on `queryRadiusPaginated`, all candidate points within the radius are fetched and sorted by distance before slicing pages.
 
 ## Batch operations
 
