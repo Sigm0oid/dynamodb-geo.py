@@ -45,3 +45,15 @@ def test_s2util_getBoundingLatLngRectFromQueryRadiusInput_NewZealand():
     latLngRect = S2Util().getBoundingLatLngRectFromQueryRadiusInput(
         qri)
     AssertThat(latLngRect).IsNotNone()
+    # Point across the +-180 antimeridian (~700 km east of center) must be inside the bounding rect
+    AssertThat(latLngRect.contains(LatLng.from_degrees(-42.0, -179.0))).IsTrue()
+
+
+def test_s2util_getBoundingLatLngRectFromQueryRadiusInput_NorthPole():
+    qri = dynamodbgeo.QueryRadiusRequest(
+        dynamodbgeo.GeoPoint(90.0, 0.0),
+        10000.0, {})
+    latLngRect = S2Util().getBoundingLatLngRectFromQueryRadiusInput(qri)
+    AssertThat(latLngRect).IsNotNone()
+    AssertThat(latLngRect.contains(LatLng.from_degrees(89.95, -135.0))).IsTrue()
+    AssertThat(latLngRect.contains(LatLng.from_degrees(89.95, 135.0))).IsTrue()

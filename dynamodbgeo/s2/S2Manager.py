@@ -14,5 +14,9 @@ class S2Manager:
         if geohash < 0:
             hashKeyLength += 1
         geohashString = str(geohash)
+        if len(geohashString) <= hashKeyLength:
+            return geohash
         denominator = 10 ** (len(geohashString) - hashKeyLength)
-        return int(geohash / denominator)
+        if geohash < 0:
+            return -((-geohash) // denominator)
+        return geohash // denominator

@@ -2,8 +2,8 @@
 
 class UpdateItemInput:
 
-    def __init__(self, GeoPoint: 'GeoPoint', RangeKeyValue: str, ExtraFields):
+    def __init__(self, GeoPoint: 'GeoPoint', RangeKeyValue: str, ExtraFields: dict = None):
         self.GeoPoint = GeoPoint
         self.RangeKeyValue = RangeKeyValue
-        self.ExtraFields = ExtraFields
+        self.ExtraFields = ExtraFields if ExtraFields is not None else {}
 

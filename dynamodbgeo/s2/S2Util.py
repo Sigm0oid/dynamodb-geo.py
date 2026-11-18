@@ -1,3 +1,5 @@
+from s2sphere import Angle as S2Angle
+from s2sphere import Cap as S2Cap
 from s2sphere import LatLng as S2LatLng
 from s2sphere import LatLngRect as S2LatLngRect
 EARTH_RADIUS_METERS = 6367000.0
@@ -20,20 +22,9 @@ class S2Util:
     def getBoundingLatLngRectFromQueryRadiusInput(self, QueryRadiusRequest: 'QueryRadiusRequest'):
         centerPoint = QueryRadiusRequest.getCenterPoint()
         radiusInMeter = QueryRadiusRequest.getRadiusInMeter()
+        if radiusInMeter < 0:
+            raise ValueError("radiusInMeter must be non-negative")
         centerLatLng = S2LatLng.from_degrees(
             centerPoint.getLatitude(), centerPoint.getLongitude())
-        latReferenceUnit = -1.0 if centerPoint.getLatitude() > 0.0 else 1.0
-        latReferenceLatLng = S2LatLng.from_degrees(centerPoint.getLatitude() + latReferenceUnit,
-                                                   centerPoint.getLongitude())
-        lngReferenceUnit = -1.0 if centerPoint.getLongitude() > 0.0 else 1.0
-        lngReferenceLatLng = S2LatLng.from_degrees(centerPoint.getLatitude(), centerPoint.getLongitude()
-                                                   + lngReferenceUnit)
-        latForRadius = radiusInMeter / \
-            (centerLatLng.get_distance(latReferenceLatLng).radians * EARTH_RADIUS_METERS)
-        lngForRadius = radiusInMeter / \
-            (centerLatLng.get_distance(lngReferenceLatLng).radians * EARTH_RADIUS_METERS)
-        minLatLng = S2LatLng.from_degrees(max(centerPoint.getLatitude() - latForRadius, -90),
-                                          max(centerPoint.getLongitude() - lngForRadius, -180))
-        maxLatLng = S2LatLng.from_degrees(min(centerPoint.getLatitude() + latForRadius, 90),
-                                          min(centerPoint.getLongitude() + lngForRadius, 180))
-        return S2LatLngRect(minLatLng, maxLatLng)
+        angle = S2Angle.from_radians(radiusInMeter / EARTH_RADIUS_METERS)
+        return S2Cap.from_axis_angle(centerLatLng.to_point(), angle).get_rect_bound()
