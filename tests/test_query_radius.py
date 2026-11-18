@@ -2,7 +2,6 @@ import uuid
 
 import dynamodbgeo
 from dynamodbgeo.util import GeoTableUtil
-from truth.truth import AssertThat
 from vars import dynamodbResource
 
 
@@ -26,7 +25,7 @@ def test_query_radius_noissuearoundEurope():
         dynamodbgeo.QueryRadiusRequest(
             dynamodbgeo.GeoPoint(32.8007718436974, 10.107633337736274),
             5836769.2553483695, {}))
-    AssertThat(result).IsEmpty()
+    assert len(result) == 0
 
 
 def test_query_radius():

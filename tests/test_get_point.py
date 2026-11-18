@@ -1,7 +1,5 @@
 import uuid
 
-from truth.truth import AssertThat
-
 import dynamodbgeo
 from dynamodbgeo.util import GeoTableUtil
 
@@ -42,4 +40,4 @@ def test_get_point():
             dynamodbgeo.GeoPoint(cords[0], cords[1]),
             range_key
         ))
-    AssertThat(response).IsNotEqualTo("Error")
+    assert response != "Error"

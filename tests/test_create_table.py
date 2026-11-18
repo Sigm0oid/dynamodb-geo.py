@@ -3,7 +3,6 @@ import uuid
 import boto3
 import dynamodbgeo
 from dynamodbgeo.util import GeoTableUtil
-from truth.truth import AssertThat
 
 from vars import dynamodbResource
 
@@ -22,4 +21,4 @@ def test_create_table():
                             region_name='local')
 
     response = dynamodb.list_tables()
-    AssertThat(response['TableNames']).Contains(table_name)
+    assert table_name in response['TableNames']

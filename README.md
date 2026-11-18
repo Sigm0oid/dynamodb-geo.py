@@ -1,307 +1,483 @@
-# Geo Library for Amazon DynamoDB
+# dynamodbgeo — Geospatial Library for Amazon DynamoDB in Python
 
-This project is an unofficial port of [awslabs/dynamodb-geo][dynamodb-geo], bringing creation and querying of geospatial data to Python developers using [Amazon DynamoDB][dynamodb].
+[![PyPI version](https://img.shields.io/pypi/v/dynamodbgeo.svg)](https://pypi.org/project/dynamodbgeo/)
+[![Python versions](https://img.shields.io/pypi/pyversions/dynamodbgeo.svg)](https://pypi.org/project/dynamodbgeo/)
+[![CI](https://github.com/Sigm0oid/dynamodb-geo.py/actions/workflows/ci.yml/badge.svg)](https://github.com/Sigm0oid/dynamodb-geo.py/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## Features
+`dynamodbgeo` is a Python port of [awslabs/dynamodb-geo][dynamodb-geo] that enables storing, updating, and querying geospatial point data in [Amazon DynamoDB][dynamodb] using Google S2 Geometry geohashes.
 
-- **Box Queries:** Return all of the items that fall within a pair of geo points that define a rectangle as projected onto a sphere.
-- **Radius Queries:** Return all of the items that are within a given radius of a geo point.
-- **Basic CRUD Operations:** Create, retrieve, update, and delete geospatial data items.
-- **Customizable:** Access to raw request and result objects from the AWS SDK for python.
+---
+
+## Key Features
+
+- **Radius Queries:** Find all points within a given radius (in meters) of a center coordinate, with optional nearest-first distance sorting (`sort=True`), including accurate handling across the `±180°` antimeridian and near the poles.
+- **Bounding-Box (Rectangle) Queries:** Retrieve all points falling within a geographic bounding rectangle defined by southwest (`minPoint`) and northeast (`maxPoint`) coordinates.
+- **Cursor-Based Pagination:** Stream spatial query results page-by-page via `queryRadiusPaginated` and `queryRectanglePaginated` using `limit` and `next_token` to bound memory and Read Capacity Unit (RCU) usage.
+- **Point CRUD Operations:** Create (`put_Point`), read (`get_Point`), update (`update_Point`), and delete (`delete_Point`) geospatial items while passing native `boto3` `Table` parameters such as `ConditionExpression`, `FilterExpression`, and `ProjectionExpression`.
+- **Table Provisioning Utilities:** Generate customizable `CreateTable` payloads (with the required Local Secondary Index) and create or delete tables via `GeoTableUtil`.
+
+---
+
+## How It Works
+
+1. **Indexing on Write:** Each `(latitude, longitude)` coordinate is mapped onto a 64-bit [S2 Cell ID][s2geometry] (`geohash`). The first `hashKeyLength` digits become the DynamoDB partition key (`hashKey`), your application-supplied identifier becomes the sort key (`rangeKey`), and a Local Secondary Index (`geohash-index`) indexes `(hashKey, geohash)`.
+2. **Querying on Read:** Given a search circle or bounding rectangle, `dynamodbgeo` computes a covering set of S2 cells, fans out `BETWEEN` range queries against `geohash-index`, and post-filters candidate items using exact spherical geometry so only points strictly inside your target region are returned.
+
+---
 
 ## Installation
 
-```python
-pip install s2sphere
-pip install boto3
+```bash
 pip install dynamodbgeo
 ```
 
-## Getting started
+**Requirements:** Python 3.7+ (`boto3>=1.11.8` and `s2sphere>=0.2.5` are installed automatically).
 
-First you'll need to import the AWS sdk and set up your DynamoDB connection:
+---
+
+## Quick Start
 
 ```python
+import uuid
 import boto3
 import dynamodbgeo
-import uuid
-dynamodb = boto3.resource('dynamodb', region_name='us-east-2')
+
+# 1. Connect to DynamoDB using the high-level boto3 ServiceResource
+dynamodb = boto3.resource("dynamodb", region_name="us-east-2")
+
+# 2. Configure your geospatial table
+config = dynamodbgeo.GeoDataManagerConfiguration("places_geo", dynamodb)
+config.hashKeyLength = 3  # Tune based on your typical search radius (see guide below)
+
+# 3. Create the table (with Local Secondary Index) if it does not exist yet
+table_util = dynamodbgeo.GeoTableUtil(config)
+create_table_input = table_util.getCreateTableRequest()
+create_table_input["ProvisionedThroughput"]["ReadCapacityUnits"] = 5
+table_util.create_table(create_table_input)
+
+# 4. Initialize GeoDataManager
+geo_manager = dynamodbgeo.GeoDataManager(config)
+
+# 5. Insert a geospatial point (latitude first, then longitude)
+point_id = str(uuid.uuid4())
+geo_manager.put_Point(
+    dynamodbgeo.PutPointInput(
+        dynamodbgeo.GeoPoint(36.879163, 10.243120),
+        point_id,
+        {
+            "Item": {
+                "name": "Carthage Station",
+                "country": "Tunisia",
+                "category": "transit",
+            },
+            "ConditionExpression": "attribute_not_exists(hashKey)",
+        },
+    )
+)
+
+# 6. Query within a 500-meter radius, sorted nearest-first
+nearby = geo_manager.queryRadius(
+    dynamodbgeo.QueryRadiusRequest(
+        dynamodbgeo.GeoPoint(36.879131, 10.243057),
+        500,
+        {
+            "FilterExpression": "country = :country",
+            "ExpressionAttributeValues": {":country": "Tunisia"},
+        },
+        sort=True,
+    )
+)
+print(nearby)
 ```
 
-Next you must create an instance of `GeoDataManagerConfiguration` for each geospatial table you wish to interact with. This is a container for various options (see API below), taking the table name and your `DynamoDB` service resource instance:
+---
+
+## Usage Guide
+
+> **Coordinate Convention:** `dynamodbgeo.GeoPoint(latitude, longitude)` always takes **`latitude` first** (`-90` to `90`) and **`longitude` second** (`-180` to `180`), in decimal degrees.
+
+### 1. Creating and Deleting Tables
+
+`GeoTableUtil.getCreateTableRequest()` returns a standard `boto3` [`create_table`][createtable] dictionary preconfigured with `(hashKey, rangeKey)` primary keys and the `geohash-index` Local Secondary Index. Customize it (for example, switching to `BillingMode="PAY_PER_REQUEST"` or adjusting throughput) before calling `create_table`:
 
 ```python
-config = dynamodbgeo.GeoDataManagerConfiguration('geo_test_8', dynamodb)
-```
-
-Finally, you should instantiate a manager to query and write to the table using this config object.
-
-```python
-geoDataManager = dynamodbgeo.GeoDataManager(config)
-```
-
-## Choosing a `hashKeyLength` (optimising for performance and cost)
-
-The `hashKeyLength` is the number of most significant digits (in base 10) of the 64-bit geo hash to use as the hash key. Larger numbers will allow small geographical areas to be spread across DynamoDB partitions, but at the cost of performance as more [queries][dynamodb-query] need to be executed for box/radius searches that span hash keys. See [these tests from the JS version][hashkeylength-tests](TODO) for an idea of how query performance scales with `hashKeyLength` for different search radii.
-
-If your data is sparse, a large number will mean more RCUs since more empty queries will be executed and each has a minimum cost. However if your data is dense and `hashKeyLength` too short, more RCUs will be needed to read a hash key and a higher proportion will be discarded by server-side filtering.
-
-From the [AWS `Query` documentation][dynamodb-query]
-
-> DynamoDB calculates the number of read capacity units consumed based on item size, not on the amount of data that is returned to an application. ... **The number will also be the same whether or not you use a `FilterExpression`**
-
-Optimally, you should pick the largest `hashKeyLength` your usage scenario allows. The wider your typical radius/box queries, the smaller it will need to be.
-
-Note that the [Java version][dynamodb-geo] uses a `hashKeyLength` of `6` by default. The same value will need to be used if you access the same data with both clients.
-
-This is an important early choice, since changing your `hashKeyLength` will mean recreating your data.
-
-From the [AWS `Query` documentation][dynamodb-query]
-
-> DynamoDB calculates the number of read capacity units consumed based on item size, not on the amount of data that is returned to an application. ... **The number will also be the same whether or not you use a `FilterExpression`**
-
-Optimally, you should pick the largest `hashKeyLength` your usage scenario allows. The wider your typical radius/box queries, the smaller it will need to be.
-
-Note that the [Java version][dynamodb-geo] uses a `hashKeyLength` of `6` by default. The same value will need to be used if you access the same data with both clients.
-
-This is an important early choice, since changing your `hashKeyLength` will mean recreating your data.
-
-## Creating and deleting a table
-
-`GeoTableUtil` provides `getCreateTableRequest` for helping you prepare a [DynamoDB CreateTable request][createtable], given a `GeoDataManagerConfiguration`, as well as `create_table` and `delete_table` helpers.
-
-You can modify this request as desired before executing it.
-
-Example:
-
-```python
-# Pick a hashKeyLength appropriate to your usage
-config.hashKeyLength = 3
-
-# Use GeoTableUtil to help construct a CreateTableInput.
 table_util = dynamodbgeo.GeoTableUtil(config)
 create_table_input = table_util.getCreateTableRequest()
 
-# Tweaking the base table parameters as a dict
-create_table_input["ProvisionedThroughput"]['ReadCapacityUnits'] = 5
+# Optional: use on-demand capacity instead of provisioned throughput
+create_table_input.pop("ProvisionedThroughput", None)
+create_table_input["BillingMode"] = "PAY_PER_REQUEST"
 
-# Use GeoTableUtil to create the table
 table_util.create_table(create_table_input)
 
-# Later, to delete the table:
+# Delete the table when cleaning up test/ephemeral environments
 # table_util.delete_table()
 ```
 
-## Adding data
+### 2. Adding a Point (`put_Point`)
+
+Provide a `GeoPoint`, a unique `RangeKeyValue` (such as a UUID), and an optional dictionary of parameters forwarded to [`Table.put_item`][putitem]:
 
 ```python
-# Preparing non-key attributes for the item to add
-PutItemInput = {
-    'Item': {
-        'Country': "Tunisia",
-        'Capital': "Tunis",
-        'year': '2020'
-    },
-    'ConditionExpression': "attribute_not_exists(hashKey)" # ... Anything else to pass through to `put_item`, eg ConditionExpression
-}
-geoDataManager.put_Point(dynamodbgeo.PutPointInput(
-    dynamodbgeo.GeoPoint(36.879163, 10.243120), # latitude then longitude
-    str(uuid.uuid4()), # Use this to ensure uniqueness of the hash/range pairs.
-    PutItemInput # pass the dict here
-))
-```
-
-See also [DynamoDB PutItem request][putitem]
-
-## Updating a specific point
-
-Note that you cannot update the hash key, range key, geohash or geoJson. If you want to change these, you'll need to recreate the record.
-
-You must specify a `RangeKeyValue`, a `GeoPoint`, and an `UpdateItemInput dict` matching the [DynamoDB UpdateItem][updateitem] request (`TableName` and `Key` are filled in for you).
-
-#### Note : You must NOT update geoJson and geohash attributes.
-
-```python
-#define a dict of the item to update
-UpdateItemDict= { # Dont provide TableName and Key, they are filled in for you
-        "UpdateExpression": "set Capital = :val1",
-        "ConditionExpression": "Capital = :val2",
-        "ExpressionAttributeValues": {
-            ":val1": "Tunis",
-            ":val2": "Ariana"
+response = geo_manager.put_Point(
+    dynamodbgeo.PutPointInput(
+        dynamodbgeo.GeoPoint(36.879163, 10.243120),
+        str(uuid.uuid4()),
+        {
+            "Item": {
+                "Country": "Tunisia",
+                "Capital": "Tunis",
+                "year": "2020",
+            },
+            "ConditionExpression": "attribute_not_exists(hashKey)",
         },
-        "ReturnValues": "ALL_NEW"
-}
-geoDataManager.update_Point(dynamodbgeo.UpdateItemInput(
-        dynamodbgeo.GeoPoint(36.879163,10.24312), # latitude then latitude longitude
-         "1e955491-d8ba-483d-b7ab-98370a8acf82", # Use this to ensure uniqueness of the hash/range pairs.
-         UpdateItemDict # pass the dict that contain the remaining parameters here
-         ))
+    )
+)
 ```
 
-## Deleting a specific point
+### 3. Retrieving a Point (`get_Point`)
 
-You must specify a `RangeKeyValue` and a `GeoPoint`. Optionally, you can pass `DeleteItemInput` matching [DynamoDB DeleteItem][deleteitem] request (`TableName` and `Key` are filled in for you).
+Retrieve a single item when you know both its `GeoPoint` (used to derive `hashKey`) and its `RangeKeyValue`:
 
 ```python
-# Preparing dict of the item to delete
-DeleteItemDict= {
-            "ConditionExpression": "attribute_exists(Country)",
-            "ReturnValues": "ALL_OLD"
-            # Don't put keys here, they will be generated for you implecitly
-        }
-geoDataManager.delete_Point(
+response = geo_manager.get_Point(
+    dynamodbgeo.GetPointInput(
+        dynamodbgeo.GeoPoint(36.879163, 10.243120),
+        "1e955491-d8ba-483d-b7ab-98370a8acf82",
+    )
+)
+item = response.get("Item")
+```
+
+### 4. Updating a Point (`update_Point`)
+
+Pass `GeoPoint`, `RangeKeyValue`, and a dictionary matching [`Table.update_item`][updateitem] (`Key` is populated automatically):
+
+> **Important:** Do **not** modify `hashKey`, `rangeKey`, `geohash`, or `geoJson` via `update_Point`. If a point's coordinates change, delete the existing item and insert a new one.
+
+```python
+response = geo_manager.update_Point(
+    dynamodbgeo.UpdateItemInput(
+        dynamodbgeo.GeoPoint(36.879163, 10.243120),
+        "1e955491-d8ba-483d-b7ab-98370a8acf82",
+        {
+            "UpdateExpression": "SET Capital = :new_cap",
+            "ConditionExpression": "Capital = :old_cap",
+            "ExpressionAttributeValues": {
+                ":new_cap": "Tunis",
+                ":old_cap": "Ariana",
+            },
+            "ReturnValues": "ALL_NEW",
+        },
+    )
+)
+```
+
+### 5. Deleting a Point (`delete_Point`)
+
+Pass `GeoPoint`, `RangeKeyValue`, and an optional dictionary matching [`Table.delete_item`][deleteitem]:
+
+```python
+response = geo_manager.delete_Point(
     dynamodbgeo.DeleteItemInput(
-    dynamodbgeo.GeoPoint(36.879163,10.24312), # latitude then latitude longitude
-        "0df9742f-619b-49e5-b79e-9fb94279d30c", # Use this to ensure uniqueness of the hash/range pairs.
-        DeleteItemDict # pass the dict that contain the remaining parameters here
-        ))
+        dynamodbgeo.GeoPoint(36.879163, 10.243120),
+        "0df9742f-619b-49e5-b79e-9fb94279d30c",
+        {
+            "ConditionExpression": "attribute_exists(Country)",
+            "ReturnValues": "ALL_OLD",
+        },
+    )
+)
 ```
 
-## Rectangular queries
+### 6. Rectangular (Bounding-Box) Queries (`queryRectangle`)
 
-Query by rectangle by specifying a `MinPoint` and `MaxPoint`. You can also pass filtring criteria in a dictionary as explained in the example.
-#### NOTE: You cannot add filtring criteria related to the key attributes as they're used in the geo spacial filtring.
+Query all items inside the spherical rectangle bounded by `minPoint` (southwest corner) and `maxPoint` (northeast corner). Optional [`Table.query`][dynamodb-query] parameters such as `FilterExpression` or `ProjectionExpression` can be passed via `query_input_dict`:
+
+> **Note:** Do not specify `KeyConditionExpression` on key attributes, as `dynamodbgeo` manages `KeyConditionExpression` internally for geohash range scans. If you pass `ProjectionExpression`, ensure `geoJson` (`config.geoJsonAttributeName`) is included so post-filtering can read item coordinates.
 
 ```python
-# Querying a rectangle
-QueryRectangleInput={
-        "FilterExpression": "Country = :val1",
-        "ExpressionAttributeValues": {
-            ":val1": "Italy",
-        }
-    }
-print(geoDataManager.queryRectangle(
-        dynamodbgeo.QueryRectangleRequest(
-            dynamodbgeo.GeoPoint(36.878184, 10.242358),
-            dynamodbgeo.GeoPoint(36.879317, 10.243648),QueryRectangleInput)))
-
+items = geo_manager.queryRectangle(
+    dynamodbgeo.QueryRectangleRequest(
+        dynamodbgeo.GeoPoint(36.878184, 10.242358),  # minPoint (SW)
+        dynamodbgeo.GeoPoint(36.879317, 10.243648),  # maxPoint (NE)
+        {
+            "FilterExpression": "Country = :country",
+            "ExpressionAttributeValues": {":country": "Tunisia"},
+        },
+    )
+)
 ```
 
-## Radius queries
+### 7. Radius Queries (`queryRadius`)
 
-Query by radius by specifying a `CenterPoint` and `RadiusInMeter`. You can also pass filtring criteria in a dictionary as explained in the example.
-
-#### NOTE: 
-Same as in query rectangle, you cannot add filtring criteria related to the key attributes as they're used in the geo spacial filtring.
+Query all items within `radiusInMeter` meters of `centerPoint`. Set `sort=True` to return results ordered from nearest to farthest:
 
 ```python
-# Querying 95 meter from the center point (36.879131, 10.243057)
-QueryRadiusInput={
-        "FilterExpression": "Country = :val1",
-        "ExpressionAttributeValues": {
-            ":val1": "Italy",
-        }
-    }
-
-query_radius_result = geoDataManager.queryRadius(
+items = geo_manager.queryRadius(
     dynamodbgeo.QueryRadiusRequest(
-        dynamodbgeo.GeoPoint(36.879131, 10.243057), # center point
-        95, QueryRadiusInput, sort=True)) # radius in meters
+        dynamodbgeo.GeoPoint(36.879131, 10.243057),  # centerPoint
+        95,                                          # radius in meters
+        {
+            "FilterExpression": "Country = :country",
+            "ExpressionAttributeValues": {":country": "Tunisia"},
+        },
+        sort=True,
+    )
+)
 ```
 
-## Pagination
+### 8. Paginated Queries (`queryRadiusPaginated` & `queryRectanglePaginated`)
 
-Use `queryRectanglePaginated` or `queryRadiusPaginated` to retrieve geospatial query results in pages using `limit` and `next_token`:
+For large datasets or wide search areas, use `queryRadiusPaginated` or `queryRectanglePaginated` to fetch pages of `limit` items using an opaque `next_token` cursor:
 
 ```python
 next_token = None
+all_items = []
+
 while True:
-    page = geoDataManager.queryRadiusPaginated(
+    page = geo_manager.queryRadiusPaginated(
         dynamodbgeo.QueryRadiusRequest(
             dynamodbgeo.GeoPoint(36.879131, 10.243057),
-            500,
-            QueryRadiusInput,
+            5000,
             sort=False,
         ),
         limit=25,
         next_token=next_token,
     )
-    items = page["Items"]
+    all_items.extend(page["Items"])
     next_token = page["NextToken"]
     if not next_token:
         break
 ```
 
-> **Note:** When `sort=False` (and for `queryRectanglePaginated`), pagination streams lazily across S2 geohash ranges and DynamoDB pages, stopping as soon as `limit` matching points are collected to conserve Read Capacity Units and memory. When `sort=True` on `queryRadiusPaginated`, all candidate points within the radius are fetched and sorted by distance before slicing pages.
+Rectangle pagination follows the exact same pattern:
 
-## Batch operations
+```python
+page = geo_manager.queryRectanglePaginated(
+    dynamodbgeo.QueryRectangleRequest(
+        dynamodbgeo.GeoPoint(36.878184, 10.242358),
+        dynamodbgeo.GeoPoint(36.879317, 10.243648),
+    ),
+    limit=25,
+    next_token=None,
+)
+```
 
-TODO:
+> **Note on `sort=False` vs `sort=True`:** When `sort=False` (and in `queryRectanglePaginated`), pagination streams lazily across S2 geohash ranges and DynamoDB pages, stopping as soon as `limit` matching points are collected to conserve RCUs and memory. When `sort=True`, all matching candidates within the radius must be evaluated and sorted by distance before slicing pages.
 
-## Configuration reference
+---
 
-These are public properties of a `GeoDataManagerConfiguration` instance. After creating the config object you may modify these properties.
+## Examples
 
-#### geohashAttributeName: string = "geohash"
+Runnable scripts are also available in the [`examples/`](https://github.com/Sigm0oid/dynamodb-geo.py/tree/master/examples) directory.
 
-The name of the attribute storing the full 64-bit geohash. Its value is auto-generated based on item coordinates.
+### Example 1: Store Locator — Nearest Open Coffee Shops Within 2 km
 
-#### hashKeyAttributeName: string = "hashKey"
+Seed multiple locations and query only **open** shops within a 2 km radius, ordered nearest-first:
 
-The name of the attribute storing the first `hashKeyLength` digits (default 2) of the geo hash, used as the hash (aka partition) part of a [hash/range primary key pair][hashrange]. Its value is auto-generated based on item coordinates.
+```python
+import uuid
+import boto3
+import dynamodbgeo
 
-#### hashKeyLength: number = 2
+dynamodb = boto3.resource("dynamodb", endpoint_url="http://localhost:8000", region_name="local")
+config = dynamodbgeo.GeoDataManagerConfiguration("coffee_shops", dynamodb)
+config.hashKeyLength = 5  # Good fit for ~1-5 km neighborhood searches
 
-See [above][choosing-hashkeylength].
+table_util = dynamodbgeo.GeoTableUtil(config)
+table_util.create_table()
 
-#### rangeKeyAttributeName: string = "rangeKey"
+geo = dynamodbgeo.GeoDataManager(config)
 
-The name of the attribute storing the range key, used as the range (aka sort) part of a [hash/range key primary key pair][hashrange]. Its value must be specified by you (hash-range pairs must be unique).
+shops = [
+    ("Blue Bottle Ferry Building", 37.7955, -122.3937, True, 4.7),
+    ("Sightglass SoMa", 37.7771, -122.4084, True, 4.6),
+    ("Ritual Coffee Valencia", 37.7565, -122.4212, False, 4.5),  # closed
+    ("Philz Embarcadero", 37.7999, -122.3982, True, 4.8),
+]
 
-#### geoJsonAttributeName: string = "geoJson"
+for name, lat, lng, is_open, rating in shops:
+    geo.put_Point(
+        dynamodbgeo.PutPointInput(
+            dynamodbgeo.GeoPoint(lat, lng),
+            str(uuid.uuid4()),
+            {
+                "Item": {
+                    "name": name,
+                    "is_open": is_open,
+                    "rating": str(rating),
+                }
+            },
+        )
+    )
 
-The name of the attribute which will contain the longitude/latitude pair in a GeoJSON-style point (see also `longitudeFirst`).
+# Search within 2,000m of Montgomery Station (37.7894, -122.4013), open shops only, nearest first
+results = geo.queryRadius(
+    dynamodbgeo.QueryRadiusRequest(
+        dynamodbgeo.GeoPoint(37.7894, -122.4013),
+        2000,
+        {
+            "FilterExpression": "is_open = :open",
+            "ExpressionAttributeValues": {":open": True},
+        },
+        sort=True,
+    )
+)
 
-#### geohashIndexName: string = "geohash-index"
+for shop in results:
+    print(f"{shop['name']} ({shop['geoJson']}) - rating {shop['rating']}")
+```
 
-The name of the index to be created against the geohash. Only used for creating new tables.
+### Example 2: Map Viewport Bounding-Box API with Cursor Pagination & Projection
 
-## Example
+Back an interactive web/mobile map (`SW` / `NE` bounds) while projecting only lightweight marker attributes and paginating with `next_token`:
 
-TODO
+```python
+import dynamodbgeo
 
-## Limitations
 
-### No composite key support
+def list_viewport_markers(
+    geo: dynamodbgeo.GeoDataManager,
+    sw_lat: float,
+    sw_lng: float,
+    ne_lat: float,
+    ne_lng: float,
+    page_size: int = 50,
+    cursor: str = None,
+) -> dict:
+    """Return one page of map markers inside the visible bounding box."""
+    request = dynamodbgeo.QueryRectangleRequest(
+        dynamodbgeo.GeoPoint(sw_lat, sw_lng),
+        dynamodbgeo.GeoPoint(ne_lat, ne_lng),
+        {
+            # Always include geoJson so post-filtering can verify exact bounds
+            "ProjectionExpression": "rangeKey, geoJson, #n, category",
+            "ExpressionAttributeNames": {"#n": "name"},
+        },
+    )
+    page = geo.queryRectanglePaginated(request, limit=page_size, next_token=cursor)
+    return {
+        "markers": page["Items"],
+        "next_cursor": page["NextToken"],
+    }
+```
 
-Currently, the library does not support composite keys. You may want to add tags such as restaurant, bar, and coffee shop, and search locations of a specific category; however, it is currently not possible. You need to create a table for each tag and store the items separately.
+### Example 3: Updating a Moving Entity's Coordinates (Courier / Vehicle Tracking)
 
-### Queries retrieve all paginated data
+Because `hashKey` and `geohash` are derived from a point's coordinates, moving an entity to a new location is performed by deleting the previous coordinate record and inserting the updated one under the same `RangeKeyValue`:
 
-Although low level [DynamoDB Query][dynamodb-query] requests return paginated results, this library automatically pages through the entire result set. When querying a large area with many points, a lot of Read Capacity Units may be consumed.
+```python
+import dynamodbgeo
 
-### More Read Capacity Units
 
-The library retrieves candidate Geo points from the cells that intersect the requested bounds. The library then post-processes the candidate data, filtering out the specific points that are outside the requested bounds. Therefore, the consumed Read Capacity Units will be higher than the final results dataset. Typically 8 queries are exectued per radius or box search.
+def move_courier(
+    geo: dynamodbgeo.GeoDataManager,
+    courier_id: str,
+    old_point: dynamodbgeo.GeoPoint,
+    new_point: dynamodbgeo.GeoPoint,
+    attributes: dict,
+):
+    geo.delete_Point(dynamodbgeo.DeleteItemInput(old_point, courier_id))
+    return geo.put_Point(
+        dynamodbgeo.PutPointInput(
+            new_point,
+            courier_id,
+            {"Item": attributes},
+        )
+    )
+```
 
-### High memory consumption
+---
 
-Because all paginated `Query` results are loaded into memory and processed, it may consume substantial amounts of memory for large datasets.
+## Choosing `hashKeyLength` (Performance & Cost Tuning)
 
-### Dataset density limitation
+`hashKeyLength` controls how many leading base-10 digits of the 64-bit S2 geohash are used as the DynamoDB partition key (`hashKey`).
 
-The Geohash used in this library is roughly centimeter precision. Therefore, the library is not suitable if your dataset has much higher density.
+- **Too small** (e.g., `1`–`2` for dense local queries): Fewer queries are dispatched per search, but each partition holds a very large geographic region, consuming more RCUs and discarding more out-of-bounds items during post-filtering.
+- **Too large** (e.g., `7+` for wide radius searches): Data spreads evenly across DynamoDB partitions, but wide box/radius searches span many `hashKey` prefixes and trigger many individual `Query` calls.
 
-[updateitem]: http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_UpdateItem.html
-[deleteitem]: http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_DeleteItem.html
-[putitem]: http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_PutItem.html
-[createtable]: http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_CreateTable.html
-[hashrange]: http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.CoreComponents.html#HowItWorks.CoreComponents.PrimaryKey
-[readconsistency]: http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.ReadConsistency.html
-[geojson]: https://geojson.org/geojson-spec.html
-[example]: https://github.com/rh389/dynamodb-geo.js/tree/master/example
-[dynamodb-geo]: https://github.com/awslabs/dynamodb-geo
-[dynamodb]: http://aws.amazon.com/dynamodb
-[dynamodb-query]: http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html
-[hashkeylength-tests]: https://github.com/rh389/dynamodb-geo.js/blob/master/test/integration/hashKeyLength.ts
-[choosing-hashkeylength]: #choosing-a-hashkeylength-optimising-for-performance-and-cost
+As a rule of thumb, choose the **largest `hashKeyLength` that keeps query fan-out reasonable for your typical search radius**:
 
-### Running Tests locally on MacOS
+| Typical Search Radius | Suggested `hashKeyLength` |
+| :--- | :--- |
+| ~100 km+ (regional) | `2` – `3` |
+| ~10 km (city-wide) | `4` – `5` |
+| ~1 km or less (neighborhood) | `5` – `6` |
 
-```sh
+See the [hashKeyLength benchmarks from dynamodb-geo.js][hashkeylength-tests] for detailed measurements across radii.
+
+> **Cross-language compatibility:** The [Java `awslabs/dynamodb-geo` library][dynamodb-geo] defaults to `hashKeyLength = 6`, whereas `dynamodbgeo` defaults to `hashKeyLength = 2`. Set `config.hashKeyLength` explicitly if sharing a table across runtimes. Changing `hashKeyLength` later requires re-creating/re-indexing your items.
+
+---
+
+## Configuration Reference
+
+Modify these attributes on your `GeoDataManagerConfiguration` instance before creating tables or running queries:
+
+| Property | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `tableName` | `str` | *(required)* | Target DynamoDB table name. |
+| `dynamodbResource` | `ServiceResource` | *(required)* | `boto3.resource("dynamodb", ...)` instance. |
+| `hashKeyLength` | `int` | `2` | Number of leading digits of `geohash` used for `hashKey`. |
+| `hashKeyAttributeName` | `str` | `"hashKey"` | Partition key attribute name (`N`). |
+| `rangeKeyAttributeName` | `str` | `"rangeKey"` | Sort key attribute name (`S`), supplied per item by caller. |
+| `geohashAttributeName` | `str` | `"geohash"` | Full 64-bit S2 geohash attribute name (`N`). |
+| `geoJsonAttributeName` | `str` | `"geoJson"` | Coordinate attribute name (`S`), stored as `"<latitude>,<longitude>"`. |
+| `geohashIndexName` | `str` | `"geohash-index"` | Local Secondary Index name over `(hashKey, geohash)`. |
+
+---
+
+## Upgrading from `0.0.3` to `0.0.4+`
+
+- **Use `boto3.resource` instead of `boto3.client`:** Pass `boto3.resource("dynamodb", ...)` to `GeoDataManagerConfiguration`. Both `GeoDataManagerConfiguration(table_name, dynamodb)` and `GeoDataManagerConfiguration(dynamodb, table_name)` are accepted.
+- **Native Python attribute values:** Item fields and `ExpressionAttributeValues` now use high-level `boto3.resource` types (`"Tunisia"`, `123`, `Decimal("1.5")`) rather than low-level wire-format dicts (`{"S": "Tunisia"}`).
+
+---
+
+## Known Limitations
+
+- **No composite partition keys:** Filtering by category (e.g., restaurant vs. coffee shop) uses DynamoDB `FilterExpression` after reading candidate geohash cells, or separate tables per high-cardinality partition.
+- **Post-filtering RCU overhead:** DynamoDB calculates RCU consumption based on all items scanned in the intersecting S2 geohash cells before exact circle/rectangle post-filtering removes false positives near cell boundaries.
+- **Precision:** The 64-bit S2 cell ID provides roughly centimeter-level spatial resolution on Earth.
+
+---
+
+## Local Development & Running Tests
+
+Start [DynamoDB Local][dynamodb-local] on port `8000` using Docker (or Homebrew on macOS):
+
+```bash
+# Via Docker (Linux / macOS / Windows)
+docker run --rm -p 8000:8000 amazon/dynamodb-local
+
+# Or on macOS via Homebrew
 brew install --cask dynamodb-local
 dynamodb-local
 ```
 
-With a shell running dynamodb local on port 8000 then the tests can be run!
+Install dependencies and run the test suite:
+
+```bash
+pip install -r requirements.txt pytest
+pip install -e .
+pytest -v
+```
+
+---
+
+## License
+
+Released under the [MIT License](LICENSE).
+
+[dynamodb-geo]: https://github.com/awslabs/dynamodb-geo
+[dynamodb]: https://aws.amazon.com/dynamodb/
+[dynamodb-local]: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DynamoDBLocal.html
+[s2geometry]: https://s2geometry.io/
+[createtable]: https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_CreateTable.html
+[putitem]: https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_PutItem.html
+[updateitem]: https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_UpdateItem.html
+[deleteitem]: https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_DeleteItem.html
+[dynamodb-query]: https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html
+[hashkeylength-tests]: https://github.com/rh389/dynamodb-geo.js/blob/master/test/integration/hashKeyLength.ts

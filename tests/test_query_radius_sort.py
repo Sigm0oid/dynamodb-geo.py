@@ -2,7 +2,6 @@ import uuid
 
 import dynamodbgeo
 from dynamodbgeo.util import GeoTableUtil
-from truth.truth import AssertThat
 
 from vars import dynamodbResource
 
@@ -49,7 +48,7 @@ def test_query_radius_sort():
         dynamodbgeo.QueryRadiusRequest(
             dynamodbgeo.GeoPoint(36.874444, 10.241059),
             95, QueryRadiusInput, sort=True))
-    AssertThat(len(result)).IsEqualTo(3)
-    AssertThat(result[0]['rangeKey']).IsEqualTo("1")
-    AssertThat(result[1]['rangeKey']).IsEqualTo("2")
-    AssertThat(result[2]['rangeKey']).IsEqualTo("3")
+    assert len(result) == 3
+    assert result[0]['rangeKey'] == "1"
+    assert result[1]['rangeKey'] == "2"
+    assert result[2]['rangeKey'] == "3"
